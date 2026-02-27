@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  username String  @unique
+  password String
+  role     String  @default("PARTICIPANT")
+  company  Company?
+}
+
+model Company {
+  id              Int       @id @default(autoincrement())
+  name            String
+  userId          Int       @unique
+  user            User      @relation(fields: [userId], references: [id])
+  totalValuation  Float
+  stockPercent    Float
+  totalShares     Int
+  sharesAvailable Int
+  sharePrice      Float
+  cashBalance     Float
+  stockEnabled    Boolean   @default(true)
+  holdings        Holding[] @relation("OwnerHoldings")
+  heldBy          Holding[] @relation("TargetHoldings")
+  buyTrades       Trade[]     @relation("Buyer")
+  sellTrades      Trade[]     @relation("Seller")
+  sellOrders      SellOrder[] @relation("SellerOrders")
+  targetOrders    SellOrder[] @relation("TargetOrders")
+  stockHistory    StockHistory[]
+
+  @@index([userId])
+}
+
+model StockHistory {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  price     Float
+  timestamp DateTime @default(now())
+
+  @@index([companyId])
+  @@index([timestamp])
+}
+
+model Holding {
+  id              Int     @id @default(autoincrement())
+  ownerCompanyId  Int
+  ownerCompany    Company @relation("OwnerHoldings", fields: [ownerCompanyId], references: [id])
+  targetCompanyId Int
+  targetCompany   Company @relation("TargetHoldings", fields: [targetCompanyId], references: [id])
+  shares          Int
+  avgBuyPrice     Float
+
+  @@unique([ownerCompanyId, targetCompanyId])
+  @@index([ownerCompanyId])
+  @@index([targetCompanyId])
+}
+
+model Trade {
+  id              Int      @id @default(autoincrement())
+  timestamp       DateTime @default(now())
+  buyerCompanyId  Int
+  sellerCompanyId Int
+  buyer           Company  @relation("Buyer", fields: [buyerCompanyId], references: [id])
+  seller          Company  @relation("Seller", fields: [sellerCompanyId], references: [id])
+  shares          Int
+  pricePerShare   Float
+  total           Float
+
+  @@index([buyerCompanyId])
+  @@index([sellerCompanyId])
+  @@index([timestamp])
+}
+
+model MarketState {
+  id                      Int     @id @default(1)
+  isOpen                  Boolean @default(false)
+  sellWithdrawCooldownSec Int     @default(60)
+}
+
+model FluctuationEvent {
+  id          Int                 @id @default(autoincrement())
+  name        String
+  description String
+  intervalMs  Int
+  totalSteps  Int
+  currentStep Int                 @default(0)
+  active      Boolean             @default(false)
+  targets     FluctuationTarget[]
+}
+
+model FluctuationTarget {
+  id             Int              @id @default(autoincrement())
+  eventId        Int
+  event          FluctuationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  companyId      Int
+  onsetDirection String
+  onsetPercent   Float
+  driftDirection String
+  driftPercent   Float
+
+  @@index([eventId])
+  @@index([companyId])
+}
+
+model SellOrder {
+  id              Int      @id @default(autoincrement())
+  sellerCompanyId Int
+  targetCompanyId Int
+  shares          Int
+  pricePerShare   Float
+  createdAt       DateTime @default(now())
+
+  sellerCompany   Company  @relation("SellerOrders", fields: [sellerCompanyId], references: [id], onDelete: Cascade)
+  targetCompany   Company  @relation("TargetOrders", fields: [targetCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([sellerCompanyId])
+  @@index([targetCompanyId])
+}
