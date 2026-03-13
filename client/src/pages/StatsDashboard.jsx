@@ -213,13 +213,20 @@ const StatsDashboard = () => {
                     <h3 className="text-xs uppercase tracking-widest mb-2 border-b border-[#ffc107]/20 pb-1 text-[#ffc107]">Events</h3>
                     <div className="space-y-2">
                         {activeEvents.length > 0 ? activeEvents.map(e => (
-                             <div key={e.id} className="bg-black/20 p-2 border-l-2 border-[#ffc107]">
-                                <div className="text-xs font-bold truncate">{e.name}</div>
+                              <div key={e.id} className="bg-black/20 p-2 border-l-2 border-[#ffc107]">
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="text-xs font-bold truncate">{e.name}</div>
+                                    {e.lastFiredAt && (
+                                        <div className="text-[8px] opacity-40 whitespace-nowrap">
+                                            {new Date(e.lastFiredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="w-full bg-gray-800 h-1 mt-1">
                                     <div className="bg-[#ffc107] h-full" style={{ width: `${(e.currentStep/e.totalSteps)*100}%` }}></div>
                                 </div>
                                 <div className="text-[9px] opacity-60 mt-1">Step {e.currentStep}/{e.totalSteps}</div>
-                             </div>
+                              </div>
                         )) : (
                             <div className="h-20 flex flex-col items-center justify-center opacity-30 italic">
                                 <span>Market is calm</span>

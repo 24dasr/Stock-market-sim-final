@@ -628,9 +628,14 @@ function EventsTab({ events, companies, onFire, onPause, onStop, onDelete, onCre
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                         <h4 className="font-heading font-semibold text-text-primary">{event.name}</h4>
-                                        <span className={`status-badge text-[10px] ${event.active ? 'bg-accent-gold/10 text-accent-gold' : 'bg-border text-text-secondary'}`}>
-                                            {event.active ? `Running ${event.currentStep}/${event.totalSteps}` : 'Inactive'}
+                                        <span className={`status-badge text-[10px] ${event.active ? 'bg-accent-gold/20 text-accent-gold border border-accent-gold/30 animate-pulse' : 'bg-white/5 text-text-secondary'}`}>
+                                            {event.active ? `⚡ ONGOING (${event.currentStep}/${event.totalSteps})` : 'IDLE'}
                                         </span>
+                                        {event.lastFiredAt && (
+                                            <span className="text-[10px] text-text-secondary font-mono">
+                                                Last: {new Date(event.lastFiredAt).toLocaleString()}
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-text-secondary text-sm mb-3">{event.description}</p>
 

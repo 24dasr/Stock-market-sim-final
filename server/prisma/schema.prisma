@@ -114,6 +114,7 @@ model FluctuationEvent {
   totalSteps  Int
   currentStep Int                 @default(0)
   active      Boolean             @default(false)
+  lastFiredAt DateTime?
   targets     FluctuationTarget[]
 }
 

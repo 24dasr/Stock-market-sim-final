@@ -167,7 +167,7 @@ router.get('/', authenticateToken, async (req, res) => {
         // Active events for all users
         const activeEvents = await prisma.fluctuationEvent.findMany({
             where: { active: true },
-            select: { id: true, name: true, description: true, currentStep: true, totalSteps: true },
+            select: { id: true, name: true, description: true, currentStep: true, totalSteps: true, lastFiredAt: true },
         });
         responseData.activeEvents = activeEvents;
 

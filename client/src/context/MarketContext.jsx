@@ -155,9 +155,9 @@ export function MarketProvider({ children }) {
             setHoldings(newHoldings);
         };
 
-        const onEventFired = ({ eventId, name, description, affectedCompanyIds }) => {
+        const onEventFired = ({ eventId, name, description, affectedCompanyIds, lastFiredAt }) => {
             setEventBanner({ eventId, name, description });
-            setActiveEvents(prev => [...prev, { id: eventId, name, description }]);
+            setActiveEvents(prev => [...prev, { id: eventId, name, description, lastFiredAt }]);
         };
 
         const onEventTick = ({ eventId, currentStep, totalSteps }) => {

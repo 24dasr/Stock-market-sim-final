@@ -115,10 +115,14 @@ router.post('/:id/fire', async (req, res) => {
             }
         }
 
-        // Set event as active
+        // Set event as active and record firing time
         await prisma.fluctuationEvent.update({
             where: { id: eventId },
-            data: { active: true, currentStep: 0 },
+            data: { 
+                active: true, 
+                currentStep: 0,
+                lastFiredAt: new Date()
+            },
         });
 
         // Broadcast event fired
@@ -134,8 +138,8 @@ router.post('/:id/fire', async (req, res) => {
             req.io.to('market').emit('event:fired', {
                 eventId,
                 name: event.name,
-                description: event.description,
                 affectedCompanyIds,
+                lastFiredAt: new Date()
             });
 
             // Start ticking
@@ -208,20 +212,6 @@ router.delete('/:id', async (req, res) => {
         res.json({ message: 'Event deleted' });
     } catch (err) {
         console.error('Delete event error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// GET /api/events/announcements
-router.get('/announcements', async (req, res) => {
-    try {
-        const announcements = await prisma.announcement.findMany({
-            orderBy: { createdAt: 'desc' },
-            take: 20
-        });
-        res.json(announcements);
-    } catch (err) {
-        console.error('List announcements error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
