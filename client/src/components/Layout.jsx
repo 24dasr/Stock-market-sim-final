@@ -10,6 +10,12 @@ const ADMIN_NAV = [
     { path: '/leaderboard', label: 'Leaderboard', icon: '◇' },
 ];
 
+const STATS_NAV = [
+    { path: '/stats-dashboard', label: 'Mission Control', icon: '🚀' },
+    { path: '/market', label: 'Market', icon: '◈' },
+    { path: '/leaderboard', label: 'Leaderboard', icon: '◇' },
+];
+
 const PARTICIPANT_NAV = [
     { path: '/dashboard', label: 'My Company', icon: '◆' },
     { path: '/market', label: 'Market', icon: '◈' },
@@ -27,8 +33,8 @@ export default function Layout() {
     const [clock, setClock] = useState(new Date());
     const [leaderboardCollapsed, setLeaderboardCollapsed] = useState(false);
 
-    const navItems = isAdmin ? ADMIN_NAV : PARTICIPANT_NAV;
-    const accentColor = isAdmin ? 'accent-gold' : 'accent-blue';
+    const navItems = isAdmin ? ADMIN_NAV : (user?.role === 'STATS' ? STATS_NAV : PARTICIPANT_NAV);
+    const accentColor = isAdmin || user?.role === 'STATS' ? 'accent-gold' : 'accent-blue';
 
     useEffect(() => {
         const timer = setInterval(() => setClock(new Date()), 1000);
@@ -42,6 +48,7 @@ export default function Layout() {
         '/portfolio': 'Portfolio',
         '/history': 'Trade History',
         '/leaderboard': 'Leaderboard',
+        '/stats-dashboard': 'Stats Mission Control',
     };
 
     return (

@@ -12,11 +12,14 @@ import CompanyDetail from './pages/CompanyDetail';
 import StatsDashboard from './pages/StatsDashboard';
 import { useMarket } from './context/MarketContext';
 
-function ProtectedRoute({ children, adminOnly = false, statsOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, statsOnly = false, participantOnly = false }) {
     const { user } = useAuth();
     if (!user) return <Navigate to="/login" replace />;
     if (adminOnly && user.role !== 'ADMIN') return <Navigate to="/market" replace />;
     if (statsOnly && !['ADMIN', 'STATS'].includes(user.role)) return <Navigate to="/market" replace />;
+    if (participantOnly && user.role !== 'PARTICIPANT') {
+        return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/stats-dashboard'} replace />;
+    }
     return children;
 }
 
@@ -27,15 +30,15 @@ function App() {
     return (
         <>
             <Routes>
-                <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace /> : <Login />} />
+                <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : (user.role === 'STATS' ? '/stats-dashboard' : '/dashboard')} replace /> : <Login />} />
                 <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                     {/* Admin Routes */}
                     <Route path="admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
                     {/* Participant Routes */}
-                    <Route path="dashboard" element={<ProtectedRoute><MyCompany /></ProtectedRoute>} />
+                    <Route path="dashboard" element={<ProtectedRoute participantOnly><MyCompany /></ProtectedRoute>} />
                     <Route path="market" element={<ProtectedRoute><Market /></ProtectedRoute>} />
-                    <Route path="portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-                    <Route path="history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+                    <Route path="portfolio" element={<ProtectedRoute participantOnly><Portfolio /></ProtectedRoute>} />
+                    <Route path="history" element={<ProtectedRoute participantOnly><History /></ProtectedRoute>} />
                     <Route path="leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
                     <Route path="company/:id" element={<ProtectedRoute><CompanyDetail /></ProtectedRoute>} />
                     <Route index element={<Navigate to={user?.role === 'ADMIN' ? '/admin' : (user?.role === 'STATS' ? '/stats-dashboard' : '/dashboard')} replace />} />

@@ -1,36 +1,47 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid } from 'recharts';
 
 export default function CompanyDetail() {
     const { id } = useParams();
     const { formatCurrency, socket, companies } = useMarket();
+    const { isAdmin } = useAuth();
     
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [auditData, setAuditData] = useState({ holdings: [], trades: [] });
 
     const company = companies.find(c => c.id === parseInt(id));
 
     useEffect(() => {
         if (!company) return;
 
-        const loadHistory = async () => {
+        const loadData = async () => {
             try {
                 setLoading(true);
-                const data = await api.getCompanyPriceHistory(company.id);
-                setHistory(data);
+                const historyData = await api.getCompanyPriceHistory(company.id);
+                setHistory(historyData);
+
+                if (isAdmin) {
+                    const [holdings, trades] = await Promise.all([
+                        api.getCompanyPortfolio(company.id),
+                        api.getAdminTrades({ companyId: company.id })
+                    ]);
+                    setAuditData({ holdings, trades });
+                }
             } catch (err) {
-                console.error('Load company history error:', err);
+                console.error('Load data error:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadHistory();
+        loadData();
 
         // Subscribe to real-time price updates for this specific company
         const handlePriceUpdate = (update) => {
@@ -192,6 +203,87 @@ export default function CompanyDetail() {
                     </div>
                 )}
             </div>
+
+            {/* Admin Audit Section */}
+            {isAdmin && (
+                <div className="space-y-6 pt-6 border-t border-border">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xl">🔍</span>
+                        <h3 className="font-heading font-bold text-lg text-accent-gold uppercase tracking-wider">Company Audit (Admin Only)</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Current Portfolio */}
+                        <div className="card">
+                            <h4 className="font-heading font-semibold text-text-primary mb-4 flex items-center justify-between">
+                                Current Portfolio
+                                <span className="text-xs text-text-secondary font-mono">
+                                    Value: {formatCurrency(auditData.holdings.reduce((sum, h) => sum + (h.shares * h.targetCompany.sharePrice), 0))}
+                                </span>
+                            </h4>
+                            <div className="overflow-x-auto">
+                                <table className="data-table text-xs">
+                                    <thead>
+                                        <tr>
+                                            <th>Target Company</th>
+                                            <th className="num">Shares</th>
+                                            <th className="num">Market Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {auditData.holdings.map(h => (
+                                            <tr key={h.id}>
+                                                <td className="font-medium text-accent-blue">{h.targetCompany.name}</td>
+                                                <td className="num font-mono">{h.shares.toLocaleString()}</td>
+                                                <td className="num font-mono text-accent-green">{formatCurrency(h.shares * h.targetCompany.sharePrice)}</td>
+                                            </tr>
+                                        ))}
+                                        {auditData.holdings.length === 0 && (
+                                            <tr>
+                                                <td colSpan="3" className="text-center py-4 text-text-secondary italic">No holdings</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Recent Activity */}
+                        <div className="card">
+                            <h4 className="font-heading font-semibold text-text-primary mb-4">Recent Activity</h4>
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                                {auditData.trades.map(t => {
+                                    const isBuyer = t.buyerCompanyId === company.id;
+                                    return (
+                                        <div key={t.id} className="p-3 rounded bg-white/[0.03] border border-border flex items-center justify-between gap-3">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={`text-[10px] px-1.5 rounded font-bold ${isBuyer ? 'bg-accent-blue/20 text-accent-blue' : 'bg-accent-gold/20 text-accent-gold'}`}>
+                                                        {isBuyer ? 'BUY' : 'SELL'}
+                                                    </span>
+                                                    <span className="text-xs font-mono text-text-secondary">
+                                                        {new Date(t.timestamp).toLocaleTimeString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-text-primary">
+                                                    {isBuyer ? `Bought from ${t.seller.name}` : `Sold to ${t.buyer.name}`}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs font-bold font-mono text-text-primary">{formatCurrency(t.total)}</p>
+                                                <p className="text-[10px] text-text-secondary font-mono">{t.shares.toLocaleString()} @ {formatCurrency(t.pricePerShare)}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {auditData.trades.length === 0 && (
+                                    <p className="text-center py-4 text-text-secondary text-sm italic">No recent trades</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

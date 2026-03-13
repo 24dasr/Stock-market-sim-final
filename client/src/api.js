@@ -70,6 +70,7 @@ export const api = {
         return apiRequest(`/admin/trades${qs ? `?${qs}` : ''}`);
     },
     exportTrades: () => apiRequest('/admin/trades/export'),
+    getCompanyPortfolio: (id) => apiRequest(`/admin/companies/${id}/portfolio`),
     resetSystem: () => apiRequest('/admin/reset', { method: 'POST' }),
     getAnalytics: () => apiRequest('/admin/analytics'),
     exportAll: async () => {

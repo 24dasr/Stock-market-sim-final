@@ -167,6 +167,23 @@ router.get('/trades', async (req, res) => {
     }
 });
 
+// GET /api/admin/companies/:id/portfolio — get any company's holdings
+router.get('/companies/:id/portfolio', async (req, res) => {
+    try {
+        const companyId = parseInt(req.params.id);
+        const holdings = await prisma.holding.findMany({
+            where: { ownerCompanyId: companyId },
+            include: {
+                targetCompany: { select: { name: true, sharePrice: true } },
+            },
+        });
+        res.json(holdings);
+    } catch (err) {
+        console.error('Admin portfolio error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // GET /api/admin/trades/export — CSV export
 router.get('/trades/export', async (req, res) => {
     try {
