@@ -3,7 +3,7 @@ import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { api } from '../api';
 
-const MarketContext = createContext(null);
+export const MarketContext = createContext(null);
 
 export function MarketProvider({ children }) {
     const { socket } = useSocket();
@@ -11,6 +11,7 @@ export function MarketProvider({ children }) {
 
     const [marketOpen, setMarketOpen] = useState(false);
     const [marketConfig, setMarketConfig] = useState({ sellWithdrawCooldownSec: 60 });
+    const [bootstrapData, setBootstrapData] = useState(null);
     const [companies, setCompanies] = useState([]);
     const [myCompany, setMyCompany] = useState(null);
     const [holdings, setHoldings] = useState([]);
@@ -52,6 +53,7 @@ export function MarketProvider({ children }) {
         try {
             setLoading(true);
             const data = await api.bootstrap();
+            setBootstrapData(data);
             setMarketOpen(data.market?.isOpen || false);
             setMarketConfig(data.market || { sellWithdrawCooldownSec: 60 });
             setCompanies(data.companies || []);
@@ -260,6 +262,7 @@ export function MarketProvider({ children }) {
         <MarketContext.Provider value={{
             marketOpen,
             marketConfig,
+            bootstrapData,
             companies,
             myCompany,
             holdings,
@@ -284,6 +287,7 @@ export function MarketProvider({ children }) {
             setEvents,
             setParticipants,
             setRecentTrades,
+            setBootstrapData,
             bootstrap,
         }}>
             {children}
