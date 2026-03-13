@@ -23,6 +23,7 @@ export function MarketProvider({ children }) {
     const [toasts, setToasts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [eventBanner, setEventBanner] = useState(null);
+    const [feed, setFeed] = useState([]);
 
     const flashTimeouts = useRef({});
 
@@ -62,6 +63,21 @@ export function MarketProvider({ children }) {
             if (data.recentTrades) setRecentTrades(data.recentTrades);
             if (data.events) setEvents(data.events);
             if (data.participants) setParticipants(data.participants);
+
+            // Fetch initial feed (Announcements + Events)
+            try {
+                const announcements = await api.getAnnouncements();
+                const feedItems = announcements.map(a => ({
+                    id: `ann-${a.id}`,
+                    type: 'ANNOUNCEMENT',
+                    data: a,
+                    timestamp: new Date(a.createdAt).getTime()
+                }));
+                // We could also mix in recent events if desired, but announcements is a good baseline
+                setFeed(feedItems.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20));
+            } catch (err) {
+                console.error('Failed to fetch initial feed', err);
+            }
         } catch (err) {
             console.error('Bootstrap error:', err);
         } finally {
@@ -127,17 +143,45 @@ export function MarketProvider({ children }) {
         const onEventFired = ({ eventId, name, description, affectedCompanyIds }) => {
             setEventBanner({ eventId, name, description });
             setActiveEvents(prev => [...prev, { id: eventId, name, description }]);
+            setFeed(prev => [{
+                id: `evt-start-${eventId}`,
+                type: 'EVENT_FIRED',
+                data: { eventId, name, description, affectedCompanyIds },
+                timestamp: Date.now()
+            }, ...prev].slice(0, 20));
         };
 
         const onEventTick = ({ eventId, currentStep, totalSteps }) => {
             setActiveEvents(prev => prev.map(e =>
                 e.id === eventId ? { ...e, currentStep, totalSteps } : e
             ));
+            setFeed(prev => [{
+                id: `evt-tick-${eventId}-${currentStep}`,
+                type: 'EVENT_TICK',
+                data: { eventId, currentStep, totalSteps },
+                timestamp: Date.now()
+            }, ...prev].slice(0, 20));
         };
 
         const onEventEnded = ({ eventId }) => {
             setActiveEvents(prev => prev.filter(e => e.id !== eventId));
             setEventBanner(prev => prev?.eventId === eventId ? null : prev);
+            
+            setFeed(prev => [{
+                id: `evt-end-${eventId}-${Date.now()}`,
+                type: 'EVENT_ENDED',
+                data: { eventId },
+                timestamp: Date.now()
+            }, ...prev].slice(0, 20));
+        };
+
+        const onAnnouncementNew = (announcement) => {
+            setFeed(prev => [{
+                id: `ann-${announcement.id}`,
+                type: 'ANNOUNCEMENT',
+                data: announcement,
+                timestamp: new Date(announcement.createdAt).getTime()
+            }, ...prev].slice(0, 20));
         };
 
         socket.on('market:status', onMarketStatus);
@@ -148,6 +192,7 @@ export function MarketProvider({ children }) {
         socket.on('event:fired', onEventFired);
         socket.on('event:tick', onEventTick);
         socket.on('event:ended', onEventEnded);
+        socket.on('announcement:new', onAnnouncementNew);
 
         // Re-bootstrap on reconnect
         socket.on('connect', () => {
@@ -163,6 +208,7 @@ export function MarketProvider({ children }) {
             socket.off('event:fired', onEventFired);
             socket.off('event:tick', onEventTick);
             socket.off('event:ended', onEventEnded);
+            socket.off('announcement:new', onAnnouncementNew);
         };
     }, [socket, bootstrap, addToast]);
 
@@ -205,6 +251,7 @@ export function MarketProvider({ children }) {
             toasts,
             loading,
             eventBanner,
+            feed,
             formatCurrency,
             addToast,
             dismissEventBanner,

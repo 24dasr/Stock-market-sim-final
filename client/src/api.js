@@ -86,6 +86,7 @@ export const api = {
 
     // Events
     getEvents: () => apiRequest('/events'),
+    getAnnouncements: () => apiRequest('/events/announcements'),
     createEvent: (data) =>
         apiRequest('/events', { method: 'POST', body: JSON.stringify(data) }),
     fireEvent: (id) =>
@@ -106,13 +107,14 @@ export const api = {
         apiRequest('/trades/buy', { method: 'POST', body: JSON.stringify({ targetCompanyId, shares }) }),
     sellShares: (targetCompanyId, shares, pricePerShare) =>
         apiRequest('/trades/sell', { method: 'POST', body: JSON.stringify({ targetCompanyId, shares, pricePerShare }) }),
-    buyP2P: (orderId) =>
-        apiRequest('/trades/buy-p2p', { method: 'POST', body: JSON.stringify({ orderId }) }),
+    buyP2P: (orderId, shares) =>
+        apiRequest('/trades/buy-p2p', { method: 'POST', body: JSON.stringify({ orderId, shares }) }),
     withdrawSellOrder: (orderId) =>
         apiRequest('/trades/sell/withdraw', { method: 'POST', body: JSON.stringify({ orderId }) }),
     getSellOrders: () => apiRequest('/trades/orders'),
     getPortfolio: () => apiRequest('/portfolio'),
     getMyTrades: () => apiRequest('/trades/me'),
+    getCompanyPriceHistory: (id) => apiRequest(`/companies/${id}/price-history`),
 
     // Shared
     getLeaderboard: () => apiRequest('/leaderboard'),

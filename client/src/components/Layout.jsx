@@ -21,7 +21,7 @@ const PARTICIPANT_NAV = [
 export default function Layout() {
     const { user, logout, isAdmin } = useAuth();
     const { connected } = useSocket();
-    const { marketOpen, leaderboard, formatCurrency, eventBanner, dismissEventBanner, activeEvents } = useMarket();
+    const { marketOpen, formatCurrency, eventBanner, dismissEventBanner, feed } = useMarket();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [clock, setClock] = useState(new Date());
@@ -172,7 +172,7 @@ export default function Layout() {
                         </div>
                     </main>
 
-                    {/* Right Leaderboard Panel (Desktop) */}
+                    {/* Right Live Feed Panel (Desktop) */}
                     <aside className={`hidden xl:flex flex-col border-l border-border bg-surface transition-all duration-200 ${leaderboardCollapsed ? 'w-10' : 'w-[280px]'}`}>
                         <button
                             onClick={() => setLeaderboardCollapsed(!leaderboardCollapsed)}
@@ -182,55 +182,73 @@ export default function Layout() {
                         </button>
 
                         {!leaderboardCollapsed && (
-                            <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                                {/* Stock Value Ranking */}
-                                <div>
-                                    <h3 className="font-heading text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                        📊 Net Stock Value
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="p-3 border-b border-border bg-surface shrink-0">
+                                    <h3 className="font-heading text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                        📻 Live Feed
                                     </h3>
-                                    <div className="space-y-1">
-                                        {leaderboard.stockValueRanking?.slice(0, 10).map((entry, i) => (
-                                            <div key={entry.companyId} className="flex items-center justify-between py-1.5 px-2 rounded text-xs hover:bg-white/[0.03]">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`font-mono font-bold ${i < 3 ? 'text-accent-gold' : 'text-text-secondary'}`}>
-                                                        #{i + 1}
-                                                    </span>
-                                                    <span className="font-heading text-text-primary truncate max-w-[120px]">{entry.name}</span>
-                                                </div>
-                                                <span className="font-mono text-accent-green text-xs">
-                                                    {formatCurrency(entry.value)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {(!leaderboard.stockValueRanking || leaderboard.stockValueRanking.length === 0) && (
-                                            <p className="text-text-secondary text-xs py-2 text-center">No data yet</p>
-                                        )}
-                                    </div>
                                 </div>
+                                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                                    {feed.map((item) => {
+                                        const timeStr = new Date(item.timestamp).toLocaleTimeString();
 
-                                {/* Liquidity Ranking */}
-                                <div>
-                                    <h3 className="font-heading text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                        💰 Cash Liquidity
-                                    </h3>
-                                    <div className="space-y-1">
-                                        {leaderboard.liquidityRanking?.slice(0, 10).map((entry, i) => (
-                                            <div key={entry.companyId} className="flex items-center justify-between py-1.5 px-2 rounded text-xs hover:bg-white/[0.03]">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`font-mono font-bold ${i < 3 ? 'text-accent-gold' : 'text-text-secondary'}`}>
-                                                        #{i + 1}
-                                                    </span>
-                                                    <span className="font-heading text-text-primary truncate max-w-[120px]">{entry.name}</span>
+                                        if (item.type === 'ANNOUNCEMENT') {
+                                            const colorClass = item.data.type === 'WARNING' ? 'text-accent-gold' : item.data.type === 'ERROR' ? 'text-accent-red' : 'text-accent-blue';
+                                            return (
+                                                <div key={item.id} className="p-2 rounded bg-white/[0.02] border border-border">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className={`text-[10px] font-bold ${colorClass}`}>ANNOUNCEMENT</span>
+                                                        <span className="text-[10px] text-text-secondary font-mono">{timeStr}</span>
+                                                    </div>
+                                                    <p className="text-xs text-text-primary leading-relaxed">{item.data.message}</p>
                                                 </div>
-                                                <span className="font-mono text-accent-blue text-xs">
-                                                    {formatCurrency(entry.value)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {(!leaderboard.liquidityRanking || leaderboard.liquidityRanking.length === 0) && (
-                                            <p className="text-text-secondary text-xs py-2 text-center">No data yet</p>
-                                        )}
-                                    </div>
+                                            );
+                                        }
+
+                                        if (item.type === 'EVENT_FIRED') {
+                                            return (
+                                                <div key={item.id} className="p-2 rounded bg-accent-gold/10 border border-accent-gold/20">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="text-[10px] font-bold text-accent-gold">EVENT STARTED</span>
+                                                        <span className="text-[10px] text-accent-gold/70 font-mono">{timeStr}</span>
+                                                    </div>
+                                                    <p className="text-xs font-semibold text-accent-gold">{item.data.name}</p>
+                                                    <p className="text-[11px] text-accent-gold/80 mt-0.5">{item.data.description}</p>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (item.type === 'EVENT_TICK') {
+                                            const pct = Math.round((item.data.currentStep / item.data.totalSteps) * 100);
+                                            return (
+                                                <div key={item.id} className="px-2 py-1.5 rounded bg-white/[0.02]">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] text-text-secondary">Fluctuation Update</span>
+                                                        <span className="text-[10px] text-text-secondary font-mono">{timeStr}</span>
+                                                    </div>
+                                                    <div className="mt-1.5 h-1 w-full bg-surface rounded overflow-hidden">
+                                                        <div className="h-full bg-accent-gold transition-all duration-300" style={{ width: `${pct}%` }} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (item.type === 'EVENT_ENDED') {
+                                            return (
+                                                <div key={item.id} className="p-2 rounded bg-white/[0.02] border border-border opacity-70">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-text-secondary">EVENT ENDED</span>
+                                                        <span className="text-[10px] text-text-secondary font-mono">{timeStr}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        return null;
+                                    })}
+                                    {feed.length === 0 && (
+                                        <p className="text-text-secondary text-xs py-4 text-center">No recent activity</p>
+                                    )}
                                 </div>
                             </div>
                         )}

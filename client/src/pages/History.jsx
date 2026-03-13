@@ -8,6 +8,8 @@ export default function History() {
     const { user } = useAuth();
     const [trades, setTrades] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('IPO'); // 'IPO' | 'P2P'
+    const [recentlyAdded, setRecentlyAdded] = useState(new Set());
 
     useEffect(() => {
         loadTrades();
@@ -17,6 +19,17 @@ export default function History() {
         try {
             setLoading(true);
             const data = await api.getMyTrades();
+            
+            // Mark new trades for animation if we already had loaded trades
+            if (trades.length > 0) {
+                const existingIds = new Set(trades.map(t => t.id));
+                const newIds = new Set(data.filter(t => !existingIds.has(t.id)).map(t => t.id));
+                if (newIds.size > 0) {
+                    setRecentlyAdded(newIds);
+                    setTimeout(() => setRecentlyAdded(new Set()), 1500); // Clear animation flag after 1.5s
+                }
+            }
+
             setTrades(data);
         } catch (err) {
             console.error('Load trades error:', err);
@@ -24,6 +37,10 @@ export default function History() {
             setLoading(false);
         }
     };
+
+    const ipoTrades = trades.filter(t => t.type === 'IPO');
+    const p2pTrades = trades.filter(t => t.type === 'P2P');
+    const displayTrades = activeTab === 'IPO' ? ipoTrades : p2pTrades;
 
     if (loading) {
         return (
@@ -43,8 +60,25 @@ export default function History() {
                     <p className="text-text-secondary text-sm mt-1">{trades.length} trades recorded</p>
                 </div>
             </div>
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-border">
+                <button
+                    onClick={() => setActiveTab('IPO')}
+                    className={`px-4 py-2.5 text-sm font-heading font-medium transition-colors border-b-2 -mb-[1px] ${activeTab === 'IPO' ? 'text-accent-gold border-accent-gold' : 'text-text-secondary border-transparent hover:text-text-primary'}`}
+                >
+                    Company Purchases
+                    <span className="ml-2 text-[10px] bg-white/10 px-1.5 py-0.5 rounded">{ipoTrades.length}</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('P2P')}
+                    className={`px-4 py-2.5 text-sm font-heading font-medium transition-colors border-b-2 -mb-[1px] ${activeTab === 'P2P' ? 'text-accent-gold border-accent-gold' : 'text-text-secondary border-transparent hover:text-text-primary'}`}
+                >
+                    P2P Trades
+                    <span className="ml-2 text-[10px] bg-white/10 px-1.5 py-0.5 rounded">{p2pTrades.length}</span>
+                </button>
+            </div>
 
-            {trades.length === 0 ? (
+            {displayTrades.length === 0 ? (
                 <div className="card text-center py-16">
                     <div className="text-5xl mb-4">📜</div>
                     <p className="font-heading text-text-secondary text-lg">No trades yet</p>
@@ -55,33 +89,45 @@ export default function History() {
                     <table className="data-table">
                         <thead>
                             <tr>
+                                <th>Transaction ID</th>
                                 <th>Time</th>
                                 <th>Direction</th>
-                                <th>Counterparty</th>
+                                <th>Buyer</th>
+                                <th>{activeTab === 'IPO' ? 'Company' : 'Seller'}</th>
                                 <th className="num">Shares</th>
                                 <th className="num">Price/Share</th>
                                 <th className="num">Total</th>
+                                <th>Type</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {trades.map((t, i) => {
+                            {displayTrades.map((t) => {
                                 const isBuyer = t.buyerCompanyId === user.companyId;
-                                const counterparty = isBuyer ? (t.seller?.name || 'Unknown') : (t.buyer?.name || 'Unknown');
+                                const isNew = recentlyAdded.has(t.id);
                                 return (
-                                    <tr key={t.id || i}>
+                                    <tr key={t.id} className={isNew ? 'animate-slide-in-flash' : ''}>
+                                        <td className="font-mono text-xs text-text-secondary">
+                                            TXN-{String(t.serialNumber).padStart(6, '0')}
+                                        </td>
                                         <td className="text-text-secondary text-xs">
                                             {new Date(t.timestamp).toLocaleString()}
                                         </td>
                                         <td>
                                             <span className={`status-badge text-[10px] ${isBuyer ? 'bg-accent-green/10 text-accent-green' : 'bg-accent-red/10 text-accent-red'}`}>
-                                                {isBuyer ? '↑ Bought' : '↓ Sold'}
+                                                {isBuyer ? '↑ BOUGHT' : '↓ SOLD'}
                                             </span>
                                         </td>
-                                        <td className="font-heading text-text-primary">{counterparty}</td>
+                                        <td className="font-heading text-text-primary">{t.buyer?.name || 'Unknown'}</td>
+                                        <td className="font-heading text-text-primary">{t.seller?.name || 'Unknown'}</td>
                                         <td className="num">{t.shares?.toLocaleString()}</td>
                                         <td className="num">{formatCurrency(t.pricePerShare)}</td>
                                         <td className={`num font-semibold ${isBuyer ? 'text-accent-red' : 'text-accent-green'}`}>
                                             {isBuyer ? '-' : '+'}{formatCurrency(t.total)}
+                                        </td>
+                                        <td>
+                                            <span className={`status-badge text-[10px] bg-white/5 text-text-secondary`}>
+                                                {t.type}
+                                            </span>
                                         </td>
                                     </tr>
                                 );

@@ -3,6 +3,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const { recordStockPrice } = require('../utils/history');
 
 const prisma = new PrismaClient();
 
@@ -85,9 +86,15 @@ router.post('/buy', async (req, res) => {
                 });
             }
 
+            // Get next serial number
+            const lastTrade = await tx.trade.findFirst({ orderBy: { serialNumber: 'desc' } });
+            const nextSerialNumber = lastTrade ? lastTrade.serialNumber + 1 : 1;
+
             // Record trade
             const trade = await tx.trade.create({
                 data: {
+                    serialNumber: nextSerialNumber,
+                    type: 'IPO',
                     buyerCompanyId,
                     sellerCompanyId: targetCompanyId,
                     shares,
@@ -95,6 +102,9 @@ router.post('/buy', async (req, res) => {
                     total: totalCost,
                 },
             });
+
+            // Record price history
+            await recordStockPrice(targetCompanyId, seller.sharePrice, tx);
 
             return { trade, buyer, seller, totalCost };
         });
@@ -105,11 +115,15 @@ router.post('/buy', async (req, res) => {
             const sellerCompany = await prisma.company.findUnique({ where: { id: targetCompanyId } });
 
             req.io.to('market').emit('trade:executed', {
+                serialNumber: result.trade.serialNumber,
+                type: result.trade.type,
+                timestamp: result.trade.timestamp,
                 buyerName: buyerCompany.name,
                 sellerName: sellerCompany.name,
                 shares,
                 pricePerShare: result.trade.pricePerShare,
                 total: result.trade.total,
+                targetCompanyId
             });
 
             // Emit leaderboard update
@@ -277,10 +291,12 @@ router.post('/sell/withdraw', async (req, res) => {
 // POST /api/trades/buy-p2p — Buy from a user's sell order
 router.post('/buy-p2p', async (req, res) => {
     try {
-        const { orderId } = req.body;
+        const { orderId, shares } = req.body;
         const buyerCompanyId = req.user.companyId;
 
-        if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+        if (!orderId || !shares || shares <= 0) {
+            return res.status(400).json({ error: 'orderId and valid shares are required' });
+        }
 
         const market = await prisma.marketState.findUnique({ where: { id: 1 } });
         if (!market || !market.isOpen) return res.status(400).json({ error: 'Market is closed' });
@@ -294,11 +310,12 @@ router.post('/buy-p2p', async (req, res) => {
             if (!order) throw new Error('Order taking failed: Order no longer exists');
             if (order.sellerCompanyId === buyerCompanyId) throw new Error('Cannot buy your own listed shares');
             if (order.targetCompanyId === buyerCompanyId) throw new Error('Cannot buy back your own company shares this way');
+            if (order.shares < shares) throw new Error(`Only ${order.shares} shares available in this order`);
 
             const buyer = await tx.company.findUnique({ where: { id: buyerCompanyId } });
 
             const currentPrice = order.targetCompany.sharePrice;
-            const totalCost = order.shares * currentPrice;
+            const totalCost = shares * currentPrice;
             if (buyer.cashBalance < totalCost) throw new Error('Insufficient funds');
 
             // 1. Move money
@@ -323,7 +340,7 @@ router.post('/buy-p2p', async (req, res) => {
             });
 
             if (existingHolding) {
-                const totalShares = existingHolding.shares + order.shares;
+                const totalShares = existingHolding.shares + shares;
                 const totalCostBasis = (existingHolding.avgBuyPrice * existingHolding.shares) + totalCost;
 
                 await tx.holding.update({
@@ -335,38 +352,57 @@ router.post('/buy-p2p', async (req, res) => {
                     data: {
                         ownerCompanyId: buyerCompanyId,
                         targetCompanyId: order.targetCompanyId,
-                        shares: order.shares,
+                        shares: shares,
                         avgBuyPrice: currentPrice,
                     },
                 });
             }
 
             // 3. Record Trade
+            const lastTrade = await tx.trade.findFirst({ orderBy: { serialNumber: 'desc' } });
+            const nextSerialNumber = lastTrade ? lastTrade.serialNumber + 1 : 1;
+
             const trade = await tx.trade.create({
                 data: {
+                    serialNumber: nextSerialNumber,
+                    type: 'P2P',
                     buyerCompanyId,
                     sellerCompanyId: order.sellerCompanyId,
-                    shares: order.shares,
+                    shares: shares,
                     pricePerShare: currentPrice,
                     total: totalCost,
                 },
             });
 
-            // 4. Delete the order
-            await tx.sellOrder.delete({ where: { id: orderId } });
+            // Record price history
+            await recordStockPrice(order.targetCompanyId, currentPrice, tx);
 
-            return { trade, order, buyer };
+            // 4. Update or Delete the order
+            if (order.shares === shares) {
+                await tx.sellOrder.delete({ where: { id: orderId } });
+            } else {
+                await tx.sellOrder.update({
+                    where: { id: orderId },
+                    data: { shares: order.shares - shares }
+                });
+            }
+
+            return { trade, order, buyer, processedShares: shares };
         });
 
         // Socket Emissions
         if (req.io) {
-            req.io.to('market').emit('order:filled', { id: orderId });
+            req.io.to('market').emit('order:filled', { id: orderId, remaining: result.order.shares - result.processedShares });
             req.io.to('market').emit('trade:executed', {
+                serialNumber: result.trade.serialNumber,
+                type: result.trade.type,
+                timestamp: result.trade.timestamp,
                 buyerName: result.buyer.name,
                 sellerName: result.order.sellerCompany.name,
-                shares: result.order.shares,
+                shares: result.processedShares,
                 pricePerShare: result.trade.pricePerShare,
                 total: result.trade.total,
+                targetCompanyId: result.order.targetCompanyId
             });
 
             const leaderboard = await calculateLeaderboard();

@@ -191,4 +191,18 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// GET /api/events/announcements
+router.get('/announcements', async (req, res) => {
+    try {
+        const announcements = await prisma.announcement.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+        res.json(announcements);
+    } catch (err) {
+        console.error('List announcements error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;

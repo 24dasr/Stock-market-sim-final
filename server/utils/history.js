@@ -9,7 +9,17 @@ const prisma = new PrismaClient();
  */
 async function recordStockPrice(companyId, price, tx = null) {
     const client = tx || prisma;
+    
+    // Legacy history for global chart
     await client.stockHistory.create({
+        data: {
+            companyId,
+            price
+        }
+    });
+
+    // New history for individual company sparklines and detailed graphs
+    await client.priceHistory.create({
         data: {
             companyId,
             price

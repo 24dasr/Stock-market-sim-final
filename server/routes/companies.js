@@ -163,4 +163,19 @@ router.get('/history', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/companies/:id/price-history
+router.get('/:id/price-history', authenticateToken, async (req, res) => {
+    try {
+        const companyId = parseInt(req.params.id);
+        const history = await prisma.priceHistory.findMany({
+            where: { companyId },
+            orderBy: { recordedAt: 'asc' },
+        });
+        res.json(history);
+    } catch (err) {
+        console.error('Get price history error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;

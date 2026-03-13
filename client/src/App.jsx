@@ -8,6 +8,7 @@ import Market from './pages/Market';
 import Portfolio from './pages/Portfolio';
 import History from './pages/History';
 import Leaderboard from './pages/Leaderboard';
+import CompanyDetail from './pages/CompanyDetail';
 import { useMarket } from './context/MarketContext';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -34,6 +35,7 @@ function App() {
                     <Route path="portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
                     <Route path="history" element={<ProtectedRoute><History /></ProtectedRoute>} />
                     <Route path="leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+                    <Route path="company/:id" element={<ProtectedRoute><CompanyDetail /></ProtectedRoute>} />
                     <Route index element={<Navigate to={user?.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

@@ -180,22 +180,26 @@ router.get('/trades/export', async (req, res) => {
 
         const csvStringifier = createObjectCsvStringifier({
             header: [
-                { id: 'timestamp', title: 'Timestamp' },
+                { id: 'transactionId', title: 'Transaction ID' },
+                { id: 'timestamp', title: 'Time' },
                 { id: 'buyer', title: 'Buyer' },
-                { id: 'seller', title: 'Seller' },
                 { id: 'shares', title: 'Shares' },
+                { id: 'seller', title: 'Seller' },
                 { id: 'pricePerShare', title: 'Price Per Share' },
-                { id: 'total', title: 'Total' },
+                { id: 'total', title: 'Total Value' },
+                { id: 'type', title: 'Trade Type' }
             ],
         });
 
         const records = trades.map(t => ({
+            transactionId: `TXN-${String(t.serialNumber).padStart(6, '0')}`,
             timestamp: t.timestamp.toISOString(),
             buyer: t.buyer.name,
-            seller: t.seller.name,
             shares: t.shares,
-            pricePerShare: t.pricePerShare.toFixed(2),
-            total: t.total.toFixed(2),
+            seller: t.seller.name,
+            pricePerShare: t.pricePerShare,
+            total: t.total,
+            type: t.type
         }));
 
         const csvString = csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(records);

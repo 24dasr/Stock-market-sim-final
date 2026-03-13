@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -34,6 +34,7 @@ model Company {
   sellOrders      SellOrder[] @relation("SellerOrders")
   targetOrders    SellOrder[] @relation("TargetOrders")
   stockHistory    StockHistory[]
+  priceHistory    PriceHistory[]
 
   @@index([userId])
 }
@@ -48,6 +49,17 @@ model StockHistory {
   @@index([companyId])
   @@index([timestamp])
 }
+
+model PriceHistory {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
+  price     Float
+  recordedAt DateTime @default(now())
+
+  @@index([companyId, recordedAt])
+}
+
 
 model Holding {
   id              Int     @id @default(autoincrement())
@@ -65,6 +77,8 @@ model Holding {
 
 model Trade {
   id              Int      @id @default(autoincrement())
+  serialNumber    Int      @unique
+  type            String   @default("IPO")
   timestamp       DateTime @default(now())
   buyerCompanyId  Int
   sellerCompanyId Int
@@ -123,4 +137,11 @@ model SellOrder {
 
   @@index([sellerCompanyId])
   @@index([targetCompanyId])
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  message   String
+  type      String   @default("INFO")
+  createdAt DateTime @default(now())
 }

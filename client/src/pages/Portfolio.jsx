@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
 import { api } from '../api';
 
@@ -124,7 +125,11 @@ export default function Portfolio() {
 
                                 return (
                                     <tr key={h.id}>
-                                        <td className="font-heading font-medium text-text-primary">{compName}</td>
+                                        <td>
+                                            <Link to={`/company/${h.targetCompanyId}`} className="font-heading font-medium text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors">
+                                                {compName}
+                                            </Link>
+                                        </td>
                                         <td className="num">{h.shares.toLocaleString()}</td>
                                         <td className={`num font-semibold text-accent-green ${flash === 'up' ? 'price-flash-up' : flash === 'down' ? 'price-flash-down' : ''}`}>
                                             {formatCurrency(sharePrice)}
@@ -188,7 +193,11 @@ export default function Portfolio() {
 
                                     return (
                                         <tr key={o.id}>
-                                            <td className="font-heading font-medium text-text-primary">{targetName}</td>
+                                            <td>
+                                                <Link to={`/company/${o.targetCompanyId}`} className="font-heading font-medium text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors">
+                                                    {targetName}
+                                                </Link>
+                                            </td>
                                             <td className="num">{o.shares.toLocaleString()}</td>
                                             <td className="num text-accent-green">{formatCurrency(o.targetCompany?.sharePrice || 0)}</td>
                                             <td className="num">{formatCurrency(o.shares * (o.targetCompany?.sharePrice || 0))}</td>

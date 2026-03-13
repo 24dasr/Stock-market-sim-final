@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
 import { api } from '../api';
 
@@ -126,7 +127,11 @@ export default function MyCompany() {
                                     const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
                                     return (
                                         <tr key={h.id}>
-                                            <td className="font-heading">{h.targetCompany.name}</td>
+                                            <td>
+                                                <Link to={`/company/${h.targetCompanyId}`} className="font-heading font-medium text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors">
+                                                    {h.targetCompany.name}
+                                                </Link>
+                                            </td>
                                             <td className="num">{h.shares.toLocaleString()}</td>
                                             <td className="num">{formatCurrency(h.targetCompany.sharePrice)}</td>
                                             <td className="num">{formatCurrency(h.avgBuyPrice)}</td>

@@ -1,14 +1,36 @@
 import { useState, useCallback, memo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import StockHistoryChart from '../components/StockHistoryChart';
+import { ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const PriceCell = memo(function PriceCell({ price, flash, formatCurrency }) {
     return (
         <td className={`num font-semibold text-accent-green ${flash === 'up' ? 'price-flash-up' : flash === 'down' ? 'price-flash-down' : ''}`}>
             {formatCurrency(price)}
         </td>
+    );
+});
+
+const Sparkline = memo(({ data, isUp }) => {
+    if (!data || data.length < 2) return <div className="h-8 w-24 text-[10px] text-text-secondary flex items-center justify-center">No data</div>;
+    return (
+        <div className="h-8 w-24 opacity-80">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data}>
+                    <Line 
+                        type="monotone" 
+                        dataKey="price" 
+                        stroke={isUp ? '#00e676' : '#ff1744'} 
+                        strokeWidth={1.5} 
+                        dot={false}
+                        isAnimationActive={false}
+                    />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
     );
 });
 
@@ -27,6 +49,7 @@ export default function Market() {
     const [orders, setOrders] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(true);
     const [p2pBuyModal, setP2pBuyModal] = useState(null);
+    const [p2pBuyQuantity, setP2pBuyQuantity] = useState('');
     const [p2pBuying, setP2pBuying] = useState(false);
 
     const [historyData, setHistoryData] = useState([]);
@@ -81,12 +104,13 @@ export default function Market() {
     };
 
     const handleP2PBuy = async () => {
-        if (!p2pBuyModal) return;
+        if (!p2pBuyModal || !p2pBuyQuantity || parseInt(p2pBuyQuantity) <= 0) return;
         setP2pBuying(true);
         try {
-            await api.buyP2P(p2pBuyModal.id);
-            addToast(`Bought ${p2pBuyModal.shares} shares of ${p2pBuyModal.targetCompany.name} from ${p2pBuyModal.sellerCompany.name}`, 'success');
+            await api.buyP2P(p2pBuyModal.id, parseInt(p2pBuyQuantity));
+            addToast(`Bought ${p2pBuyQuantity} shares of ${p2pBuyModal.targetCompany.name} from ${p2pBuyModal.sellerCompany.name}`, 'success');
             setP2pBuyModal(null);
+            setP2pBuyQuantity('');
             fetchOrders();
         } catch (err) {
             addToast(err.message, 'error');
@@ -98,7 +122,7 @@ export default function Market() {
     const getLivePrice = (companyId, fallback) => companies.find(c => c.id === companyId)?.sharePrice || fallback;
 
     const totalCost = buyModal && buyQuantity ? parseInt(buyQuantity) * buyModal.sharePrice : 0;
-    const p2pTotalCost = p2pBuyModal ? p2pBuyModal.shares * getLivePrice(p2pBuyModal.targetCompanyId, p2pBuyModal.targetCompany?.sharePrice || 0) : 0;
+    const p2pTotalCost = p2pBuyModal && p2pBuyQuantity ? parseInt(p2pBuyQuantity) * getLivePrice(p2pBuyModal.targetCompanyId, p2pBuyModal.targetCompany?.sharePrice || 0) : 0;
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -148,6 +172,7 @@ export default function Market() {
                                 <tr>
                                     <th>Company</th>
                                     <th className="num">Stock Price</th>
+                                    <th>Trend</th>
                                     <th className="num">Available</th>
                                     <th className="num">Total Shares</th>
                                     <th>Status</th>
@@ -160,8 +185,26 @@ export default function Market() {
                                     const canBuy = marketOpen && c.stockEnabled && c.sharesAvailable > 0 && c.id !== user?.companyId;
                                     return (
                                         <tr key={c.id}>
-                                            <td className="font-heading font-medium text-text-primary">{c.name}</td>
+                                            <td>
+                                                <Link to={`/company/${c.id}`} className="font-heading font-medium text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors">
+                                                    {c.name}
+                                                </Link>
+                                            </td>
                                             <PriceCell price={c.sharePrice} flash={flash} formatCurrency={formatCurrency} />
+                                            <td>
+                                                <Sparkline 
+                                                    data={historyData
+                                                        .filter(h => h.companyId === c.id)
+                                                        .map(h => ({ price: h.price }))
+                                                        .slice(-20)
+                                                    } 
+                                                    isUp={(() => {
+                                                        const pts = historyData.filter(h => h.companyId === c.id).slice(-20);
+                                                        if (pts.length < 2) return true;
+                                                        return pts[pts.length - 1].price >= pts[0].price;
+                                                    })()}
+                                                />
+                                            </td>
                                             <td className="num">{c.sharesAvailable.toLocaleString()}</td>
                                             <td className="num text-text-secondary">{c.totalShares.toLocaleString()}</td>
                                             <td>
@@ -220,7 +263,11 @@ export default function Market() {
                                     const livePrice = getLivePrice(o.targetCompanyId, o.targetCompany?.sharePrice || 0);
                                     return (
                                         <tr key={o.id}>
-                                            <td className="font-heading font-medium text-text-primary">{o.targetCompany.name}</td>
+                                            <td>
+                                                <Link to={`/company/${o.targetCompanyId}`} className="font-heading font-medium text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors">
+                                                    {o.targetCompany.name}
+                                                </Link>
+                                            </td>
                                             <td className="text-text-secondary">{o.sellerCompany.name}</td>
                                             <td className="num">{o.shares.toLocaleString()}</td>
                                             <td className="num text-accent-green">{formatCurrency(livePrice)}</td>
@@ -231,7 +278,7 @@ export default function Market() {
                                             {user?.role === 'PARTICIPANT' && (
                                                 <td>
                                                     <button
-                                                        onClick={() => setP2pBuyModal(o)}
+                                                        onClick={() => { setP2pBuyModal(o); setP2pBuyQuantity(''); }}
                                                         disabled={!canBuy}
                                                         className="btn btn-primary text-xs py-1 px-3"
                                                         title={!marketOpen ? 'Market Closed' : (!canBuy ? 'Cannot buy from/for own company' : '')}
@@ -302,25 +349,42 @@ export default function Market() {
                     <div className="modal-content max-w-sm" onClick={e => e.stopPropagation()}>
                         <h3 className="font-heading font-semibold text-lg mb-1">Buy P2P Listing</h3>
                         <p className="text-text-secondary text-sm mb-4">
-                            You are buying <span className="font-mono text-text-primary">{p2pBuyModal.shares.toLocaleString()}</span> shares of <span className="text-text-primary font-semibold">{p2pBuyModal.targetCompany.name}</span> originally listed by <span className="text-text-primary">{p2pBuyModal.sellerCompany.name}</span>.
+                            You are buying shares of <span className="text-text-primary font-semibold">{p2pBuyModal.targetCompany.name}</span> originally listed by <span className="text-text-primary">{p2pBuyModal.sellerCompany.name}</span>.<br />
+                            Available: <span className="font-mono text-text-primary">{p2pBuyModal.shares.toLocaleString()}</span>
                         </p>
 
-                        <div className="card mb-4 p-3 border border-border">
-                            <div className="flex justify-between text-sm mb-2">
-                                <span className="text-text-secondary">Current Price</span>
-                                <span className="font-mono text-text-primary">{formatCurrency(getLivePrice(p2pBuyModal.targetCompanyId, p2pBuyModal.targetCompany?.sharePrice || 0))}</span>
-                            </div>
-                            <div className="flex justify-between text-sm pt-2 border-t border-border">
-                                <span className="font-medium text-text-secondary uppercase">Total Cost</span>
-                                <span className="font-mono font-bold text-accent-green">{formatCurrency(p2pTotalCost)}</span>
-                            </div>
+                        <div className="mb-4">
+                            <label className="label">Quantity</label>
+                            <input
+                                type="number"
+                                className="input"
+                                value={p2pBuyQuantity}
+                                onChange={e => setP2pBuyQuantity(e.target.value)}
+                                max={p2pBuyModal.shares}
+                                min="1"
+                                placeholder="Number of shares"
+                                autoFocus
+                            />
                         </div>
+
+                        {p2pBuyQuantity && parseInt(p2pBuyQuantity) > 0 && (
+                            <div className="card mb-4 p-3 border border-border">
+                                <div className="flex justify-between text-sm mb-2">
+                                    <span className="text-text-secondary">Current Price</span>
+                                    <span className="font-mono text-text-primary">{formatCurrency(getLivePrice(p2pBuyModal.targetCompanyId, p2pBuyModal.targetCompany?.sharePrice || 0))}</span>
+                                </div>
+                                <div className="flex justify-between text-sm pt-2 border-t border-border">
+                                    <span className="font-medium text-text-secondary uppercase">Total Cost</span>
+                                    <span className="font-mono font-bold text-accent-green">{formatCurrency(p2pTotalCost)}</span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex gap-3 justify-end">
                             <button onClick={() => setP2pBuyModal(null)} className="btn btn-outline">Cancel</button>
                             <button
                                 onClick={handleP2PBuy}
-                                disabled={p2pBuying}
+                                disabled={p2pBuying || !p2pBuyQuantity || parseInt(p2pBuyQuantity) <= 0 || parseInt(p2pBuyQuantity) > p2pBuyModal.shares}
                                 className="btn btn-success"
                             >
                                 {p2pBuying ? 'Processing...' : 'Confirm Buy'}

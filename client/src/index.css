@@ -335,6 +335,27 @@ html, body, #root {
   100% { background-position: 200% 0; }
 }
 
+/* Custom Row Animation for Live Feed */
+.animate-slide-in-flash {
+  animation: slideInFlash 1.5s ease-out forwards;
+}
+
+@keyframes slideInFlash {
+  0% { 
+    opacity: 0; 
+    transform: translateY(-10px); 
+    background-color: rgba(0, 230, 118, 0.4); 
+  }
+  10% { 
+    opacity: 1; 
+    transform: translateY(0); 
+    background-color: rgba(0, 230, 118, 0.2); 
+  }
+  100% { 
+    background-color: transparent; 
+  }
+}
+
 /* Login Grid Animation */
 .login-grid {
   position: fixed;
