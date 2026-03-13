@@ -19,9 +19,7 @@ const server = http.createServer(app);
 // Socket.io setup
 const io = new Server(server, {
     cors: {
-        origin: process.env.NODE_ENV === 'production'
-            ? false
-            : ['http://localhost:5173', 'http://localhost:3000'],
+        origin: true, // Allow all origins in prod/dev for easier deployment
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -31,9 +29,7 @@ const io = new Server(server, {
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production'
-        ? false
-        : ['http://localhost:5173', 'http://localhost:3000'],
+    origin: true,
     credentials: true,
 }));
 app.use(express.json());
@@ -86,10 +82,22 @@ app.patch('/api/market', authenticateToken, requireRole('ADMIN'), async (req, re
 });
 
 // ──── Serve Frontend in Production ────
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, 'public')));
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+const isProd = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
+if (isProd) {
+    const publicPath = path.join(__dirname, 'public');
+    console.log(`🌐 Serving static files from: ${publicPath}`);
+    app.use(express.static(publicPath));
+    
+    // Catch-all route to serve index.html for React Router
+    app.get('*', (req, res, next) => {
+        // Skip for API routes just in case
+        if (req.path.startsWith('/api')) return next();
+        res.sendFile(path.join(publicPath, 'index.html'));
+    });
+} else {
+    app.get('/', (req, res) => {
+        res.json({ message: 'STXSIM API is running. Point your frontend to this server.' });
     });
 }
 
