@@ -579,8 +579,13 @@ function CompaniesTab({ companies, participants, onToggleStock, onDelete, onEdit
                                             </span>
                                         </td>
                                         <td>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => onEdit(c)} className="btn btn-outline text-xs py-1 px-2">Edit</button>
+                                            <div className="flex gap-2">
+                                                <Link to={`/company/${c.id}`} className="p-1.5 rounded hover:bg-white/5 text-accent-blue transition-colors" title="Audit Portfolio">
+                                                    🔍
+                                                </Link>
+                                                <button onClick={() => onEdit(c)} className="p-1.5 rounded hover:bg-white/5 text-text-secondary hover:text-text-primary transition-colors" title="Edit Company">
+                                                    ✎
+                                                </button>
                                                 <button onClick={() => onToggleStock(c.id)} className="btn btn-outline text-xs py-1 px-2">
                                                     {c.stockEnabled ? 'Disable' : 'Enable'}
                                                 </button>
