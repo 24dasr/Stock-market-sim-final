@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { MarketContext } from '../context/MarketContext';
-import { SocketContext } from '../context/SocketContext';
+import React, { useState, useEffect } from 'react';
+import { useMarket } from '../context/MarketContext';
+import { useSocket } from '../context/SocketContext';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell
@@ -19,8 +19,8 @@ const COMPANY_COLORS = [
 ];
 
 const StatsDashboard = () => {
-    const { bootstrapData, companies, activeEvents } = useContext(MarketContext);
-    const socket = useContext(SocketContext);
+    const { bootstrapData, companies, activeEvents } = useMarket();
+    const { socket } = useSocket();
 
     const [networthHistory, setNetworthHistory] = useState([]);
     const [liquidityHistory, setLiquidityHistory] = useState([]);
