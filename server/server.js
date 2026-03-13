@@ -50,6 +50,7 @@ const adminRoutes = require('./routes/admin');
 const companiesRoutes = require('./routes/companies');
 const tradesRoutes = require('./routes/trades');
 const eventsRoutes = require('./routes/events');
+const leaderboardRoutes = require('./routes/leaderboard');
 const bootstrapRoutes = require('./routes/bootstrap');
 const statsRoutes = require('./routes/stats');
 const { authenticateToken } = require('./middleware/auth');
