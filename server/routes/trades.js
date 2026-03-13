@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const { authenticateToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const { recordStockPrice } = require('../utils/history');
+const { recordCompanySnapshot } = require('../utils/statsCollector');
 
 const prisma = new PrismaClient();
 
@@ -136,6 +137,10 @@ router.post('/buy', async (req, res) => {
                 include: { targetCompany: { select: { name: true, sharePrice: true } } },
             });
             req.io.to(`company:${buyerCompanyId}`).emit('portfolio:update', { holdings: buyerHoldings });
+
+            // Record snapshots for stats dashboard
+            recordCompanySnapshot(buyerCompanyId);
+            recordCompanySnapshot(targetCompanyId);
         }
 
         res.json(result.trade);
@@ -414,11 +419,11 @@ router.post('/buy-p2p', async (req, res) => {
             });
             req.io.to(`company:${buyerCompanyId}`).emit('portfolio:update', { holdings: buyerHoldings });
 
-            const sellerHoldings = await prisma.holding.findMany({
-                where: { ownerCompanyId: result.order.sellerCompanyId },
-                include: { targetCompany: { select: { name: true, sharePrice: true } } },
-            });
             req.io.to(`company:${result.order.sellerCompanyId}`).emit('portfolio:update', { holdings: sellerHoldings });
+
+            // Record snapshots for stats dashboard
+            recordCompanySnapshot(buyerCompanyId);
+            recordCompanySnapshot(result.order.sellerCompanyId);
         }
 
         res.json(result.trade);

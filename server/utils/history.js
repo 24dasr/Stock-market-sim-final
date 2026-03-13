@@ -25,6 +25,10 @@ async function recordStockPrice(companyId, price, tx = null) {
             price
         }
     });
+    
+    // Trigger market-wide net worth snapshot check
+    const { recordSnapshots } = require('./statsCollector');
+    recordSnapshots();
 }
 
 module.exports = {

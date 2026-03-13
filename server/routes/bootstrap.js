@@ -92,6 +92,78 @@ router.get('/', authenticateToken, async (req, res) => {
             responseData.participants = participants;
         }
 
+        // STATS role bootstrap
+        if (req.user.role === 'STATS') {
+            const [networthHistory, mostTraded, recentTrades, sessionSnapshot, heatmap, achievements] = await Promise.all([
+                // Networth history
+                (async () => {
+                    const companies = await prisma.company.findMany({
+                        include: {
+                            netWorthSnapshots: {
+                                orderBy: { recordedAt: 'asc' },
+                                select: { recordedAt: true, netWorth: true, cash: true }
+                            }
+                        }
+                    });
+                    return companies.map(c => ({
+                        companyId: c.id,
+                        companyName: c.name,
+                        snapshots: c.netWorthSnapshots
+                    }));
+                })(),
+                // Most traded
+                (async () => {
+                    const companies = await prisma.company.findMany();
+                    const trades = await prisma.trade.findMany();
+                    return companies.map(c => {
+                        const involving = trades.filter(t => t.buyerCompanyId === c.id || t.sellerCompanyId === c.id);
+                        return {
+                            companyId: c.id,
+                            name: c.name,
+                            tradeCount: involving.length,
+                            totalVolume: involving.reduce((sum, t) => sum + t.total, 0)
+                        };
+                    });
+                })(),
+                // Recent trades (full details)
+                prisma.trade.findMany({
+                    include: { buyer: true, seller: true },
+                    orderBy: { timestamp: 'desc' },
+                    take: 50
+                }),
+                // Session snapshot (placeholder logic, similar to stats.js)
+                (async () => {
+                    const trades = await prisma.trade.findMany();
+                    return {
+                        totalTradeVolume: trades.reduce((sum, t) => sum + t.total, 0),
+                        totalTrades: trades.length,
+                        // ... other stats
+                    };
+                })(),
+                // Heatmap
+                prisma.company.findMany().then(companies => companies.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    currentPrice: c.sharePrice,
+                    startPrice: 10,
+                    changePercent: ((c.sharePrice - 10) / 10) * 100
+                }))),
+                // Achievements (Assuming they arrive via Announcements for now as per previous changes)
+                prisma.announcement.findMany({
+                    where: { type: 'ACHIEVEMENT' },
+                    orderBy: { createdAt: 'desc' },
+                    take: 20
+                })
+            ]);
+
+            responseData.networthHistory = networthHistory;
+            responseData.mostTraded = mostTraded;
+            responseData.recentTrades = recentTrades;
+            responseData.sessionSnapshot = sessionSnapshot;
+            responseData.heatmap = heatmap;
+            responseData.recentAchievements = achievements;
+        }
+
         // Active events for all users
         const activeEvents = await prisma.fluctuationEvent.findMany({
             where: { active: true },

@@ -4,9 +4,10 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
 const ADMINS = [
-    { username: 'admin1', password: 'AdminBRSI_1' },
-    { username: 'admin2', password: 'AdminBRSI_2' },
-    { username: 'admin3', password: 'AdminBRSI_3' },
+    { username: 'admin1', password: 'AdminBRSI_1', role: 'ADMIN' },
+    { username: 'admin2', password: 'AdminBRSI_2', role: 'ADMIN' },
+    { username: 'admin3', password: 'AdminBRSI_3', role: 'ADMIN' },
+    { username: 'StatsAdmin', password: 'ButterscotchIceCream', role: 'STATS' },
 ];
 
 async function main() {
@@ -29,7 +30,7 @@ async function main() {
             create: {
                 username: admin.username,
                 password: hashedPassword,
-                role: 'ADMIN',
+                role: admin.role,
             },
         });
         console.log(`✅ Admin created: ${admin.username}`);

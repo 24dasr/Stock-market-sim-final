@@ -7,11 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  PARTICIPANT
+  STATS
+}
+
 model User {
   id       Int     @id @default(autoincrement())
   username String  @unique
   password String
-  role     String  @default("PARTICIPANT")
+  role     Role    @default(PARTICIPANT)
   company  Company?
 }
 
@@ -35,6 +41,7 @@ model Company {
   targetOrders    SellOrder[] @relation("TargetOrders")
   stockHistory    StockHistory[]
   priceHistory    PriceHistory[]
+  netWorthSnapshots NetWorthSnapshot[]
 
   @@index([userId])
 }
@@ -144,4 +151,16 @@ model Announcement {
   message   String
   type      String   @default("INFO")
   createdAt DateTime @default(now())
+}
+
+model NetWorthSnapshot {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  company        Company  @relation(fields: [companyId], references: [id])
+  netWorth       Float
+  cash           Float
+  portfolioValue Float
+  recordedAt     DateTime @default(now())
+
+  @@index([companyId, recordedAt])
 }

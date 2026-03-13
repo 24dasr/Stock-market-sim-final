@@ -50,10 +50,11 @@ const adminRoutes = require('./routes/admin');
 const companiesRoutes = require('./routes/companies');
 const tradesRoutes = require('./routes/trades');
 const eventsRoutes = require('./routes/events');
-const leaderboardRoutes = require('./routes/leaderboard');
 const bootstrapRoutes = require('./routes/bootstrap');
+const statsRoutes = require('./routes/stats');
 const { authenticateToken } = require('./middleware/auth');
 const { requireRole } = require('./middleware/role');
+const { startStatsJob } = require('./utils/statsCollector');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -63,6 +64,7 @@ app.use('/api/portfolio', authenticateToken, requireRole('PARTICIPANT'), tradesR
 app.use('/api/events', eventsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/bootstrap', bootstrapRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Market state routes (admin only)
 app.patch('/api/market', authenticateToken, requireRole('ADMIN'), async (req, res) => {
@@ -122,6 +124,9 @@ async function start() {
 
             // Resume active events
             resumeActiveEvents(io);
+
+            // Start background stats collection
+            startStatsJob();
         });
     } catch (err) {
         console.error('❌ Server start error:', err);

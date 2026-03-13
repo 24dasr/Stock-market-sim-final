@@ -9,12 +9,14 @@ import Portfolio from './pages/Portfolio';
 import History from './pages/History';
 import Leaderboard from './pages/Leaderboard';
 import CompanyDetail from './pages/CompanyDetail';
+import StatsDashboard from './pages/StatsDashboard';
 import { useMarket } from './context/MarketContext';
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, statsOnly = false }) {
     const { user } = useAuth();
     if (!user) return <Navigate to="/login" replace />;
     if (adminOnly && user.role !== 'ADMIN') return <Navigate to="/market" replace />;
+    if (statsOnly && !['ADMIN', 'STATS'].includes(user.role)) return <Navigate to="/market" replace />;
     return children;
 }
 
@@ -36,8 +38,9 @@ function App() {
                     <Route path="history" element={<ProtectedRoute><History /></ProtectedRoute>} />
                     <Route path="leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
                     <Route path="company/:id" element={<ProtectedRoute><CompanyDetail /></ProtectedRoute>} />
-                    <Route index element={<Navigate to={user?.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />} />
+                    <Route index element={<Navigate to={user?.role === 'ADMIN' ? '/admin' : (user?.role === 'STATS' ? '/stats-dashboard' : '/dashboard')} replace />} />
                 </Route>
+                <Route path="/stats-dashboard" element={<ProtectedRoute statsOnly><StatsDashboard /></ProtectedRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
 

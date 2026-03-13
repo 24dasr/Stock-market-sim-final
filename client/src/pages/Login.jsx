@@ -14,7 +14,9 @@ export default function Login() {
         setError('');
         try {
             const user = await login(username, password);
-            navigate(user.role === 'ADMIN' ? '/admin' : '/dashboard');
+            if (user.role === 'ADMIN') navigate('/admin');
+            else if (user.role === 'STATS') navigate('/stats-dashboard');
+            else navigate('/dashboard');
         } catch (err) {
             setError(err.message || 'Login failed');
         }
