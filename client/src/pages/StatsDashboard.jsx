@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMarket } from '../context/MarketContext';
 import { useSocket } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell
@@ -21,6 +22,7 @@ const COMPANY_COLORS = [
 const StatsDashboard = () => {
     const { bootstrapData, companies, activeEvents } = useMarket();
     const { socket } = useSocket();
+    const { logout } = useAuth();
 
     const [networthHistory, setNetworthHistory] = useState([]);
     const [liquidityHistory, setLiquidityHistory] = useState([]);
@@ -106,12 +108,20 @@ const StatsDashboard = () => {
                     <span className="text-xl font-bold tracking-widest text-[#ffc107]">STATS ADMIN MISSION CONTROL</span>
                 </div>
                 <div className="text-3xl font-mono text-[#ffc107] font-bold tabular-nums">{currentTime}</div>
-                <div className="flex items-center gap-2">
-                    <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                    <span className="text-red-500 font-bold tracking-tighter">LIVE MONITORING</span>
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                        <span className="text-red-500 font-bold tracking-tighter">LIVE MONITORING</span>
+                    </div>
+                    <button 
+                        onClick={logout}
+                        className="px-3 py-1 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-500 text-xs font-bold uppercase tracking-widest transition-colors rounded"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </div>
 
