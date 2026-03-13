@@ -6,12 +6,16 @@ import { useMarket } from '../context/MarketContext';
 
 const ADMIN_NAV = [
     { path: '/admin', label: 'Dashboard', icon: '◆' },
+    { path: '/stats-dashboard', label: 'Mission Control', icon: '🚀' },
     { path: '/market', label: 'Market', icon: '◈' },
+    { path: '/dashboard', label: 'My Company', icon: '🏢' },
+    { path: '/portfolio', label: 'Portfolio', icon: '▣' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '◇' },
 ];
 
 const STATS_NAV = [
     { path: '/stats-dashboard', label: 'Mission Control', icon: '🚀' },
+    { path: '/admin', label: 'Admin Tools', icon: '⚙' },
     { path: '/market', label: 'Market', icon: '◈' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '◇' },
 ];
@@ -33,8 +37,8 @@ export default function Layout() {
     const [clock, setClock] = useState(new Date());
     const [leaderboardCollapsed, setLeaderboardCollapsed] = useState(false);
 
-    const navItems = isAdmin ? ADMIN_NAV : (user?.role === 'STATS' ? STATS_NAV : PARTICIPANT_NAV);
-    const accentColor = isAdmin || user?.role === 'STATS' ? 'accent-gold' : 'accent-blue';
+    const navItems = user?.role === 'ADMIN' ? ADMIN_NAV : (user?.role === 'STATS' ? STATS_NAV : PARTICIPANT_NAV);
+    const accentColor = ['ADMIN', 'STATS'].includes(user?.role) ? 'accent-gold' : 'accent-blue';
 
     useEffect(() => {
         const timer = setInterval(() => setClock(new Date()), 1000);
@@ -145,8 +149,10 @@ export default function Layout() {
                         </div>
 
                         {/* Admin Badge */}
-                        {isAdmin && (
-                            <span className="status-badge bg-accent-gold/10 text-accent-gold">ADMIN</span>
+                        {['ADMIN', 'STATS'].includes(user?.role) && (
+                            <span className="status-badge bg-accent-gold/10 text-accent-gold">
+                                {user.role === 'ADMIN' ? 'ADMIN' : 'STATS'}
+                            </span>
                         )}
 
                         {/* Clock */}

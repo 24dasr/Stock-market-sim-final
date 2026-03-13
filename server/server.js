@@ -63,8 +63,8 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/bootstrap', bootstrapRoutes);
 app.use('/api/stats', statsRoutes);
 
-// Market state routes (admin only)
-app.patch('/api/market', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+// Market state routes (admin or stats only)
+app.patch('/api/market', authenticateToken, requireRole('ADMIN', 'STATS'), async (req, res) => {
     try {
         const { isOpen } = req.body;
         const market = await prisma.marketState.upsert({

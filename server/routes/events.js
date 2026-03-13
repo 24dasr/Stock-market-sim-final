@@ -19,7 +19,8 @@ router.get('/announcements', authenticateToken, async (req, res) => {
     }
 });
 
-router.use(authenticateToken, requireRole('ADMIN'));
+// All routes require admin or stats
+router.use(authenticateToken, requireRole('ADMIN', 'STATS'));
 
 // GET /api/events — list all events
 router.get('/', async (req, res) => {

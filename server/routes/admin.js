@@ -8,8 +8,8 @@ const { createObjectCsvStringifier } = require('csv-writer');
 
 const prisma = new PrismaClient();
 
-// All routes require admin
-router.use(authenticateToken, requireRole('ADMIN'));
+// All routes require admin or stats
+router.use(authenticateToken, requireRole('ADMIN', 'STATS'));
 
 // GET /api/admin/users — list all participant accounts
 router.get('/users', async (req, res) => {

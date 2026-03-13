@@ -36,9 +36,9 @@ router.get('/', authenticateToken, async (req, res) => {
             leaderboard: leaderboardData,
         };
 
-        // If participant, also include their company details and holdings
-        if (req.user.role === 'PARTICIPANT' && req.user.companyId) {
-            const [myCompany, holdings, recentTrades] = await Promise.all([
+        // If user has a company, also include their company details and holdings (for any role)
+        if (req.user.companyId) {
+            const [myCompany, holdings, personalTrades] = await Promise.all([
                 prisma.company.findUnique({ where: { id: req.user.companyId } }),
                 prisma.holding.findMany({
                     where: { ownerCompanyId: req.user.companyId },
@@ -62,12 +62,13 @@ router.get('/', authenticateToken, async (req, res) => {
 
             responseData.myCompany = myCompany;
             responseData.holdings = holdings;
-            responseData.recentTrades = recentTrades;
+            responseData.recentPersonalTrades = personalTrades; // Separate from global trades
+            if (!responseData.recentTrades) responseData.recentTrades = personalTrades;
         }
 
-        // If admin, include recent trades and active events
-        if (req.user.role === 'ADMIN') {
-            const [recentTrades, events, participants] = await Promise.all([
+        // If admin or stats, include admin tools data
+        if (['ADMIN', 'STATS'].includes(req.user.role)) {
+            const [globalTrades, events, participants] = await Promise.all([
                 prisma.trade.findMany({
                     include: {
                         buyer: { select: { name: true } },
@@ -87,14 +88,14 @@ router.get('/', authenticateToken, async (req, res) => {
                 }),
             ]);
 
-            responseData.recentTrades = recentTrades;
+            responseData.recentTrades = globalTrades;
             responseData.events = events;
             responseData.participants = participants;
         }
 
-        // STATS role bootstrap
+        // Additional STATS-only data (charts/history)
         if (req.user.role === 'STATS') {
-            const [networthHistory, mostTraded, recentTrades, sessionSnapshot, heatmap, achievements] = await Promise.all([
+            const [networthHistory, mostTraded, sessionSnapshot, heatmap, achievements] = await Promise.all([
                 // Networth history
                 (async () => {
                     const companies = await prisma.company.findMany({
@@ -125,19 +126,13 @@ router.get('/', authenticateToken, async (req, res) => {
                         };
                     });
                 })(),
-                // Recent trades (full details)
-                prisma.trade.findMany({
-                    include: { buyer: true, seller: true },
-                    orderBy: { timestamp: 'desc' },
-                    take: 50
-                }),
-                // Session snapshot (placeholder logic, similar to stats.js)
+                // Session snapshot
                 (async () => {
                     const trades = await prisma.trade.findMany();
                     return {
                         totalTradeVolume: trades.reduce((sum, t) => sum + t.total, 0),
                         totalTrades: trades.length,
-                        // ... other stats
+                        marketStatus: (await prisma.marketState.findUnique({ where: { id: 1 } }))?.isOpen ? 'OPEN' : 'CLOSED'
                     };
                 })(),
                 // Heatmap
@@ -148,7 +143,6 @@ router.get('/', authenticateToken, async (req, res) => {
                     startPrice: 10,
                     changePercent: ((c.sharePrice - 10) / 10) * 100
                 }))),
-                // Achievements (Assuming they arrive via Announcements for now as per previous changes)
                 prisma.announcement.findMany({
                     where: { type: 'ACHIEVEMENT' },
                     orderBy: { createdAt: 'desc' },
@@ -158,7 +152,6 @@ router.get('/', authenticateToken, async (req, res) => {
 
             responseData.networthHistory = networthHistory;
             responseData.mostTraded = mostTraded;
-            responseData.recentTrades = recentTrades;
             responseData.sessionSnapshot = sessionSnapshot;
             responseData.heatmap = heatmap;
             responseData.recentAchievements = achievements;
