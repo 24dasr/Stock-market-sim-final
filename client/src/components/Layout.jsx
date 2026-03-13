@@ -190,60 +190,18 @@ export default function Layout() {
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-3 space-y-3">
                                     {feed.map((item) => {
-                                        const timeStr = new Date(item.timestamp).toLocaleTimeString();
-
-                                        if (item.type === 'ANNOUNCEMENT') {
-                                            const colorClass = item.data.type === 'WARNING' ? 'text-accent-gold' : item.data.type === 'ERROR' ? 'text-accent-red' : 'text-accent-blue';
-                                            return (
-                                                <div key={item.id} className="p-2 rounded bg-white/[0.02] border border-border">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className={`text-[10px] font-bold ${colorClass}`}>ANNOUNCEMENT</span>
-                                                        <span className="text-[10px] text-text-secondary font-mono">{timeStr}</span>
-                                                    </div>
-                                                    <p className="text-xs text-text-primary leading-relaxed">{item.data.message}</p>
-                                                </div>
-                                            );
-                                        }
-
                                         if (item.type === 'EVENT_FIRED') {
                                             return (
-                                                <div key={item.id} className="p-2 rounded bg-accent-gold/10 border border-accent-gold/20">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[10px] font-bold text-accent-gold">EVENT STARTED</span>
-                                                        <span className="text-[10px] text-accent-gold/70 font-mono">{timeStr}</span>
-                                                    </div>
-                                                    <p className="text-xs font-semibold text-accent-gold">{item.data.name}</p>
-                                                    <p className="text-[11px] text-accent-gold/80 mt-0.5">{item.data.description}</p>
+                                                <div key={item.id} className="p-3 rounded bg-white/[0.03] border border-border">
+                                                    <h4 className="text-xs font-bold text-accent-gold uppercase tracking-wider mb-1">
+                                                        {item.data.name}
+                                                    </h4>
+                                                    <p className="text-sm text-text-primary leading-relaxed">
+                                                        {item.data.description}
+                                                    </p>
                                                 </div>
                                             );
                                         }
-
-                                        if (item.type === 'EVENT_TICK') {
-                                            const pct = Math.round((item.data.currentStep / item.data.totalSteps) * 100);
-                                            return (
-                                                <div key={item.id} className="px-2 py-1.5 rounded bg-white/[0.02]">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] text-text-secondary">Fluctuation Update</span>
-                                                        <span className="text-[10px] text-text-secondary font-mono">{timeStr}</span>
-                                                    </div>
-                                                    <div className="mt-1.5 h-1 w-full bg-surface rounded overflow-hidden">
-                                                        <div className="h-full bg-accent-gold transition-all duration-300" style={{ width: `${pct}%` }} />
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-
-                                        if (item.type === 'EVENT_ENDED') {
-                                            return (
-                                                <div key={item.id} className="p-2 rounded bg-white/[0.02] border border-border opacity-70">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-bold text-text-secondary">EVENT ENDED</span>
-                                                        <span className="text-[10px] text-text-secondary font-mono">{timeStr}</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-
                                         return null;
                                     })}
                                     {feed.length === 0 && (

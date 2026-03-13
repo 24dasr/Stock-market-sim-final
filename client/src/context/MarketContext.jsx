@@ -67,13 +67,26 @@ export function MarketProvider({ children }) {
             // Fetch initial feed (Announcements + Events)
             try {
                 const announcements = await api.getAnnouncements();
-                const feedItems = announcements.map(a => ({
-                    id: `ann-${a.id}`,
-                    type: 'ANNOUNCEMENT',
-                    data: a,
-                    timestamp: new Date(a.createdAt).getTime()
-                }));
-                // We could also mix in recent events if desired, but announcements is a good baseline
+                const feedItems = announcements.map(a => {
+                    if (a.type === 'FLUCTUATION') {
+                        try {
+                            const data = JSON.parse(a.message);
+                            return {
+                                id: `evt-ann-${a.id}`,
+                                type: 'EVENT_FIRED',
+                                data: { name: data.name, description: data.description },
+                                timestamp: new Date(a.createdAt).getTime()
+                            };
+                        } catch (e) { return null; }
+                    }
+                    return {
+                        id: `ann-${a.id}`,
+                        type: 'ANNOUNCEMENT',
+                        data: a,
+                        timestamp: new Date(a.createdAt).getTime()
+                    };
+                }).filter(Boolean);
+
                 setFeed(feedItems.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20));
             } catch (err) {
                 console.error('Failed to fetch initial feed', err);
@@ -143,12 +156,6 @@ export function MarketProvider({ children }) {
         const onEventFired = ({ eventId, name, description, affectedCompanyIds }) => {
             setEventBanner({ eventId, name, description });
             setActiveEvents(prev => [...prev, { id: eventId, name, description }]);
-            setFeed(prev => [{
-                id: `evt-start-${eventId}`,
-                type: 'EVENT_FIRED',
-                data: { eventId, name, description, affectedCompanyIds },
-                timestamp: Date.now()
-            }, ...prev].slice(0, 20));
         };
 
         const onEventTick = ({ eventId, currentStep, totalSteps }) => {
@@ -176,12 +183,26 @@ export function MarketProvider({ children }) {
         };
 
         const onAnnouncementNew = (announcement) => {
-            setFeed(prev => [{
+            let feedItem = {
                 id: `ann-${announcement.id}`,
                 type: 'ANNOUNCEMENT',
                 data: announcement,
                 timestamp: new Date(announcement.createdAt).getTime()
-            }, ...prev].slice(0, 20));
+            };
+
+            if (announcement.type === 'FLUCTUATION') {
+                try {
+                    const data = JSON.parse(announcement.message);
+                    feedItem = {
+                        id: `evt-ann-${announcement.id}`,
+                        type: 'EVENT_FIRED',
+                        data: { name: data.name, description: data.description },
+                        timestamp: new Date(announcement.createdAt).getTime()
+                    };
+                } catch (e) { return; }
+            }
+
+            setFeed(prev => [feedItem, ...prev].slice(0, 20));
         };
 
         socket.on('market:status', onMarketStatus);

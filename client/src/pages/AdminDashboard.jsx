@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
 import { api } from '../api';
 import StockHistoryChart from '../components/StockHistoryChart';

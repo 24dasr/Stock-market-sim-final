@@ -6,6 +6,19 @@ const { requireRole } = require('../middleware/role');
 
 const prisma = new PrismaClient();
 
+router.get('/announcements', authenticateToken, async (req, res) => {
+    try {
+        const announcements = await prisma.announcement.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+        res.json(announcements);
+    } catch (err) {
+        console.error('List announcements error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 router.use(authenticateToken, requireRole('ADMIN'));
 
 // GET /api/events — list all events
@@ -110,6 +123,14 @@ router.post('/:id/fire', async (req, res) => {
 
         // Broadcast event fired
         if (req.io) {
+            // Create a persistent announcement for the feed
+            const announcement = await prisma.announcement.create({
+                data: {
+                    message: JSON.stringify({ name: event.name, description: event.description }),
+                    type: 'FLUCTUATION'
+                }
+            });
+            req.io.to('market').emit('announcement:new', announcement);
             req.io.to('market').emit('event:fired', {
                 eventId,
                 name: event.name,
