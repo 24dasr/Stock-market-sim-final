@@ -5,7 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell
 } from 'recharts';
-import api from '../api';
+import { api } from '../api';
 
 const GOLD_ACCENT = '#ffc107';
 const DARK_BG = '#080b12';
@@ -71,9 +71,9 @@ const StatsDashboard = () => {
     const refreshStats = async () => {
         try {
             const [hw, snp, mt] = await Promise.all([
-                api.get('/api/stats/heatmap'),
-                api.get('/api/stats/session-snapshot'),
-                api.get('/api/stats/most-traded')
+                api.get('/stats/heatmap'),
+                api.get('/stats/session-snapshot'),
+                api.get('/stats/most-traded')
             ]);
             setHeatmap(hw.data);
             setSessionSnapshot(snp.data);

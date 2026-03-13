@@ -119,4 +119,5 @@ export const api = {
     // Shared
     getLeaderboard: () => apiRequest('/leaderboard'),
     getHistory: () => apiRequest('/companies/history'),
+    get: (endpoint) => apiRequest(endpoint),
 };
