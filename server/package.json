@@ -8,7 +8,7 @@
     "start": "node server.js",
     "seed": "node prisma/seed.js",
     "migrate": "npx prisma migrate dev --name init",
-    "build": "npx prisma generate && npx prisma db push && npm install --include=dev --prefix ../client && npm run build --prefix ../client && npx shx rm -rf public && npx shx cp -r ../client/dist public"
+    "build": "npx prisma generate && npx prisma db push --accept-data-loss && npm install --include=dev --prefix ../client && npm run build --prefix ../client && npx shx rm -rf public && npx shx cp -r ../client/dist public"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
