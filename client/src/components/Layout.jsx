@@ -6,16 +6,12 @@ import { useMarket } from '../context/MarketContext';
 
 const ADMIN_NAV = [
     { path: '/admin', label: 'Dashboard', icon: '◆' },
-    { path: '/stats-dashboard', label: 'Mission Control', icon: '🚀' },
     { path: '/market', label: 'Market', icon: '◈' },
-    { path: '/dashboard', label: 'My Company', icon: '🏢' },
-    { path: '/portfolio', label: 'Portfolio', icon: '▣' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '◇' },
 ];
 
 const STATS_NAV = [
     { path: '/stats-dashboard', label: 'Mission Control', icon: '🚀' },
-    { path: '/admin', label: 'Admin Tools', icon: '⚙' },
     { path: '/market', label: 'Market', icon: '◈' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '◇' },
 ];

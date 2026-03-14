@@ -16,14 +16,10 @@ function ProtectedRoute({ children, adminOnly = false, statsOnly = false, partic
     const { user } = useAuth();
     if (!user) return <Navigate to="/login" replace />;
     
-    // Administrative roles (ADMIN and STATS) are generally allowed everywhere except specific restrictions
-    const isAdministrative = ['ADMIN', 'STATS'].includes(user.role);
-
-    if (adminOnly && !isAdministrative) return <Navigate to="/market" replace />;
-    if (statsOnly && !isAdministrative) return <Navigate to="/market" replace />;
-    
-    // Admins and Stats can view participant pages if they want, but we might want to redirect them to their primary dashboard if they land on /dashboard
-    if (participantOnly && !isAdministrative && user.role !== 'PARTICIPANT') {
+    // Strict role enforcement
+    if (adminOnly && user.role !== 'ADMIN') return <Navigate to="/market" replace />;
+    if (statsOnly && user.role !== 'STATS') return <Navigate to="/market" replace />;
+    if (participantOnly && user.role !== 'PARTICIPANT') {
         return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/stats-dashboard'} replace />;
     }
     

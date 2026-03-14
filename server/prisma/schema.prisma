@@ -3,21 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-enum Role {
-  ADMIN
-  PARTICIPANT
-  STATS
-}
+// Role enum removed for SQLite compatibility. Roles are now handled as strings: 'ADMIN', 'PARTICIPANT', 'STATS'
 
 model User {
   id       Int     @id @default(autoincrement())
   username String  @unique
   password String
-  role     Role    @default(PARTICIPANT)
+  role     String  @default("PARTICIPANT")
   company  Company?
 }
 

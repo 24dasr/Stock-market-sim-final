@@ -66,8 +66,8 @@ router.get('/', authenticateToken, async (req, res) => {
             if (!responseData.recentTrades) responseData.recentTrades = personalTrades;
         }
 
-        // If admin or stats, include admin tools data
-        if (['ADMIN', 'STATS'].includes(req.user.role)) {
+        // If admin, include global data
+        if (req.user.role === 'ADMIN') {
             const [globalTrades, events, participants] = await Promise.all([
                 prisma.trade.findMany({
                     include: {
@@ -91,6 +91,26 @@ router.get('/', authenticateToken, async (req, res) => {
             responseData.recentTrades = globalTrades;
             responseData.events = events;
             responseData.participants = participants;
+        }
+
+        // If stats, include monitoring data
+        if (req.user.role === 'STATS') {
+            const [globalTrades, events] = await Promise.all([
+                prisma.trade.findMany({
+                    include: {
+                        buyer: { select: { name: true } },
+                        seller: { select: { name: true } },
+                    },
+                    orderBy: { timestamp: 'desc' },
+                    take: 100,
+                }),
+                prisma.fluctuationEvent.findMany({
+                    include: { targets: true },
+                    orderBy: { id: 'desc' },
+                }),
+            ]);
+            responseData.recentTrades = globalTrades;
+            responseData.events = events;
         }
 
         // Additional STATS-only data (charts/history)
