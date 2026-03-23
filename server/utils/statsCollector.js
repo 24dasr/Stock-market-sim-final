@@ -5,7 +5,7 @@ const DEBOUNCE_TIME = 5000; // 5 seconds
 const lastSnapshot = new Map(); // companyId -> timestamp
 
 let lastGlobalSnapshot = 0;
-const GLOBAL_DEBOUNCE = 5000;
+const GLOBAL_DEBOUNCE = 30000;
 
 async function recordSnapshots() {
     const now = Date.now();

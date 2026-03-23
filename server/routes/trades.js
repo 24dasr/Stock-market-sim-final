@@ -8,6 +8,11 @@ const { recordCompanySnapshot } = require('../utils/statsCollector');
 
 const prisma = new PrismaClient();
 
+// Caching leaderboard to prevent DB hammering
+let cachedLeaderboard = null;
+let lastLeaderboardTime = 0;
+const LEADERBOARD_CACHE_MS = 5000;
+
 router.use(authenticateToken, requireRole('PARTICIPANT', 'ADMIN'));
 
 // POST /api/trades/buy
@@ -500,8 +505,13 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Leaderboard calculation helper
+// Leaderboard calculation helper with caching
 async function calculateLeaderboard() {
+    const now = Date.now();
+    if (cachedLeaderboard && (now - lastLeaderboardTime < LEADERBOARD_CACHE_MS)) {
+        return cachedLeaderboard;
+    }
+
     const companies = await prisma.company.findMany({
         include: {
             holdings: {
@@ -521,7 +531,10 @@ async function calculateLeaderboard() {
         companyId: c.id, name: c.name, value: c.cashBalance,
     })).sort((a, b) => b.value - a.value);
 
-    return { stockValueRanking, liquidityRanking };
+    const result = { stockValueRanking, liquidityRanking };
+    cachedLeaderboard = result;
+    lastLeaderboardTime = now;
+    return result;
 }
 
 module.exports = router;
