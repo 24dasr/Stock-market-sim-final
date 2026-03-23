@@ -244,6 +244,10 @@ router.post('/reset', async (req, res) => {
             await tx.trade.deleteMany();
             await tx.holding.deleteMany();
             await tx.stockHistory.deleteMany();
+            await tx.priceHistory.deleteMany();
+            await tx.netWorthSnapshot.deleteMany();
+            await tx.sellOrder.deleteMany();
+            await tx.announcement.deleteMany();
             await tx.company.deleteMany();
 
             // Delete all participant users
