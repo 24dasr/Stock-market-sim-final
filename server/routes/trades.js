@@ -395,7 +395,7 @@ router.post('/buy-p2p', async (req, res) => {
             }
 
             return { trade, order, buyer, processedShares: shares };
-        });
+        }, { timeout: 20000 });
 
         // Socket Emissions
         if (req.io) {
@@ -421,6 +421,10 @@ router.post('/buy-p2p', async (req, res) => {
             });
             req.io.to(`company:${buyerCompanyId}`).emit('portfolio:update', { holdings: buyerHoldings });
 
+            const sellerHoldings = await prisma.holding.findMany({
+                where: { ownerCompanyId: result.order.sellerCompanyId },
+                include: { targetCompany: { select: { name: true, sharePrice: true } } },
+            });
             req.io.to(`company:${result.order.sellerCompanyId}`).emit('portfolio:update', { holdings: sellerHoldings });
 
             // Record snapshots for stats dashboard
