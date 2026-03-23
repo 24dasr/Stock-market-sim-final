@@ -91,6 +91,7 @@ export default function History() {
                             <tr>
                                 <th>Transaction ID</th>
                                 <th>Time</th>
+                                <th>Asset</th>
                                 <th>Direction</th>
                                 <th>Buyer</th>
                                 <th>{activeTab === 'IPO' ? 'Company' : 'Seller'}</th>
@@ -112,6 +113,7 @@ export default function History() {
                                         <td className="text-text-secondary text-xs">
                                             {new Date(t.timestamp).toLocaleString()}
                                         </td>
+                                        <td className="font-medium text-accent-gold text-xs">{t.targetCompany?.name || '—'}</td>
                                         <td>
                                             <span className={`status-badge text-[10px] ${isBuyer ? 'bg-accent-green/10 text-accent-green' : 'bg-accent-red/10 text-accent-red'}`}>
                                                 {isBuyer ? '↑ BOUGHT' : '↓ SOLD'}

@@ -38,6 +38,7 @@ model Company {
   stockHistory    StockHistory[]
   priceHistory    PriceHistory[]
   netWorthSnapshots NetWorthSnapshot[]
+  targetTrades    Trade[]     @relation("TargetCompany")
 
   @@index([userId])
 }
@@ -85,8 +86,10 @@ model Trade {
   timestamp       DateTime @default(now())
   buyerCompanyId  Int
   sellerCompanyId Int
+  targetCompanyId Int
   buyer           Company  @relation("Buyer", fields: [buyerCompanyId], references: [id])
   seller          Company  @relation("Seller", fields: [sellerCompanyId], references: [id])
+  targetCompany   Company  @relation("TargetCompany", fields: [targetCompanyId], references: [id])
   shares          Int
   pricePerShare   Float
   total           Float

@@ -25,8 +25,28 @@ export function MarketProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [eventBanner, setEventBanner] = useState(null);
     const [feed, setFeed] = useState([]);
+    const [marketDataTick, setMarketDataTick] = useState(0);
 
     const flashTimeouts = useRef({});
+
+    const refreshCompanies = useCallback(async () => {
+        try {
+            const data = await api.getMarketCompanies();
+            setCompanies(data);
+        } catch (err) {
+            console.error('Refresh companies error:', err);
+        }
+    }, []);
+
+    const refreshMyCompany = useCallback(async () => {
+        if (!user || user.role !== 'PARTICIPANT') return;
+        try {
+            const data = await api.getMyCompany();
+            setMyCompany(data);
+        } catch (err) {
+            console.error('Refresh my company error:', err);
+        }
+    }, [user]);
 
     // Format currency
     const formatCurrency = useCallback((value) => {
@@ -145,6 +165,9 @@ export function MarketProvider({ children }) {
         const onTradeExecuted = (trade) => {
             setRecentTrades(prev => [trade, ...prev].slice(0, 100));
             addToast(`Trade: ${trade.buyerName} bought ${trade.shares} shares of ${trade.sellerName}`, 'success');
+            refreshCompanies();
+            refreshMyCompany();
+            setMarketDataTick(prev => prev + 1);
         };
 
         const onLeaderboardUpdate = (data) => {
@@ -207,6 +230,10 @@ export function MarketProvider({ children }) {
             setFeed(prev => [feedItem, ...prev].slice(0, 20));
         };
 
+        const onOrderTick = () => {
+            setMarketDataTick(prev => prev + 1);
+        };
+
         socket.on('market:status', onMarketStatus);
         socket.on('price:update', onPriceUpdate);
         socket.on('trade:executed', onTradeExecuted);
@@ -216,6 +243,9 @@ export function MarketProvider({ children }) {
         socket.on('event:tick', onEventTick);
         socket.on('event:ended', onEventEnded);
         socket.on('announcement:new', onAnnouncementNew);
+        socket.on('order:created', onOrderTick);
+        socket.on('order:withdrawn', onOrderTick);
+        socket.on('order:filled', onOrderTick);
 
         // Re-bootstrap on reconnect
         socket.on('connect', () => {
@@ -232,31 +262,15 @@ export function MarketProvider({ children }) {
             socket.off('event:tick', onEventTick);
             socket.off('event:ended', onEventEnded);
             socket.off('announcement:new', onAnnouncementNew);
+            socket.off('order:created', onOrderTick);
+            socket.off('order:withdrawn', onOrderTick);
+            socket.off('order:filled', onOrderTick);
         };
     }, [socket, bootstrap, addToast]);
 
     const dismissEventBanner = useCallback(() => {
         setEventBanner(null);
     }, []);
-
-    const refreshCompanies = useCallback(async () => {
-        try {
-            const data = await api.getMarketCompanies();
-            setCompanies(data);
-        } catch (err) {
-            console.error('Refresh companies error:', err);
-        }
-    }, []);
-
-    const refreshMyCompany = useCallback(async () => {
-        if (!user || user.role !== 'PARTICIPANT') return;
-        try {
-            const data = await api.getMyCompany();
-            setMyCompany(data);
-        } catch (err) {
-            console.error('Refresh my company error:', err);
-        }
-    }, [user]);
 
     return (
         <MarketContext.Provider value={{
@@ -276,7 +290,9 @@ export function MarketProvider({ children }) {
             loading,
             eventBanner,
             feed,
+            marketDataTick,
             formatCurrency,
+            socket,
             addToast,
             dismissEventBanner,
             refreshCompanies,

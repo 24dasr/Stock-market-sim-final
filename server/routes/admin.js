@@ -156,6 +156,7 @@ router.get('/trades', async (req, res) => {
             include: {
                 buyer: { select: { name: true } },
                 seller: { select: { name: true } },
+                targetCompany: { select: { name: true } },
             },
             orderBy: { timestamp: 'desc' },
         });
@@ -191,6 +192,7 @@ router.get('/trades/export', async (req, res) => {
             include: {
                 buyer: { select: { name: true } },
                 seller: { select: { name: true } },
+                targetCompany: { select: { name: true } },
             },
             orderBy: { timestamp: 'desc' },
         });
@@ -200,6 +202,7 @@ router.get('/trades/export', async (req, res) => {
                 { id: 'transactionId', title: 'Transaction ID' },
                 { id: 'timestamp', title: 'Time' },
                 { id: 'buyer', title: 'Buyer' },
+                { id: 'target', title: 'Asset' },
                 { id: 'shares', title: 'Shares' },
                 { id: 'seller', title: 'Seller' },
                 { id: 'pricePerShare', title: 'Price Per Share' },
@@ -212,6 +215,7 @@ router.get('/trades/export', async (req, res) => {
             transactionId: `TXN-${String(t.serialNumber).padStart(6, '0')}`,
             timestamp: t.timestamp.toISOString(),
             buyer: t.buyer.name,
+            target: t.targetCompany.name,
             shares: t.shares,
             seller: t.seller.name,
             pricePerShare: t.pricePerShare,

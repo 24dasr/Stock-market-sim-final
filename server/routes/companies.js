@@ -103,28 +103,6 @@ router.get('/me', authenticateToken, requireRole('PARTICIPANT'), async (req, res
     }
 });
 
-// PATCH /api/companies/me/shares — set shares available to sell
-router.patch('/me/shares', authenticateToken, requireRole('PARTICIPANT'), async (req, res) => {
-    try {
-        const { sharesAvailable } = req.body;
-        const company = await prisma.company.findUnique({ where: { id: req.user.companyId } });
-        if (!company) return res.status(404).json({ error: 'Company not found' });
-
-        const maxShares = company.totalShares;
-        const clamped = Math.max(0, Math.min(sharesAvailable, maxShares));
-
-        const updated = await prisma.company.update({
-            where: { id: req.user.companyId },
-            data: { sharesAvailable: clamped },
-        });
-
-        res.json(updated);
-    } catch (err) {
-        console.error('Update shares error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
 // GET /api/market/companies — all companies with current price
 router.get('/', authenticateToken, async (req, res) => {
     try {

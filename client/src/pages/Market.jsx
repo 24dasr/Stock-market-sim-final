@@ -35,7 +35,7 @@ const Sparkline = memo(({ data, isUp }) => {
 });
 
 export default function Market() {
-    const { companies, marketOpen, priceFlashes, formatCurrency, addToast, refreshCompanies } = useMarket();
+    const { companies, marketOpen, priceFlashes, formatCurrency, addToast, refreshCompanies, marketDataTick } = useMarket();
     const { user } = useAuth();
 
     const [activeTab, setActiveTab] = useState('primary');
@@ -85,7 +85,7 @@ export default function Market() {
         if (activeTab === 'secondary') {
             fetchOrders();
         }
-    }, [activeTab]);
+    }, [activeTab, marketDataTick]);
 
     const handleBuy = async () => {
         if (!buyModal || !buyQuantity || parseInt(buyQuantity) <= 0) return;

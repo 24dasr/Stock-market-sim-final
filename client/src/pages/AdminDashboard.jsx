@@ -21,16 +21,46 @@ export default function AdminDashboard() {
     const [analytics, setAnalytics] = useState(null);
     const [resetInput, setResetInput] = useState('');
     const [exporting, setExporting] = useState(false);
+    const [p2pOrders, setP2pOrders] = useState([]);
+    const [loadingP2P, setLoadingP2P] = useState(false);
 
     useEffect(() => {
         loadHistory();
         loadAnalytics();
+        if (activeTab === 'p2p') {
+            loadP2POrders();
+        }
         const interval = setInterval(() => {
             loadHistory();
             loadAnalytics();
+            if (activeTab === 'p2p') {
+                loadP2POrders();
+            }
         }, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [activeTab]);
+
+    const loadP2POrders = async () => {
+        try {
+            setLoadingP2P(true);
+            const data = await api.getSellOrders();
+            setP2pOrders(data.orders || []);
+        } catch (err) {
+            console.error('Failed to load P2P orders:', err);
+        } finally {
+            setLoadingP2P(false);
+        }
+    };
+
+    const handleWithdrawP2POrder = async (orderId) => {
+        try {
+            await api.withdrawSellOrder(orderId);
+            addToast('P2P order cancelled and shares returned', 'success');
+            await loadP2POrders();
+        } catch (err) {
+            addToast(err.message, 'error');
+        }
+    };
 
     const loadAnalytics = async () => {
         try {
@@ -440,7 +470,10 @@ export default function AdminDashboard() {
 
             {activeTab === 'p2p' && (
                 <P2PMarketTab
+                    orders={p2pOrders}
                     companies={companies}
+                    loading={loadingP2P}
+                    onWithdraw={handleWithdrawP2POrder}
                     formatCurrency={formatCurrency}
                 />
             )}
@@ -793,7 +826,7 @@ function TradesTab({ trades, companies, filters, setFilters, onExport, formatCur
                             <tr>
                                 <th>Transaction ID</th>
                                 <th>Time</th>
-                                <th>Direction</th>
+                                <th>Asset</th>
                                 <th>Buyer</th>
                                 <th>{activeTab === 'IPO' ? 'Company' : 'Seller'}</th>
                                 <th className="num">Shares</th>
@@ -816,6 +849,7 @@ function TradesTab({ trades, companies, filters, setFilters, onExport, formatCur
                                                 EXCHANGE
                                             </span>
                                         </td>
+                                        <td className="font-medium text-accent-gold text-xs">{t.targetCompany?.name || '—'}</td>
                                         <td className="text-accent-green font-heading">{t.buyer?.name || t.buyerName}</td>
                                         <td className="text-accent-red font-heading">{t.seller?.name || t.sellerName}</td>
                                         <td className="num">{t.shares?.toLocaleString()}</td>
@@ -1129,54 +1163,68 @@ function CreateEventModal({ companies, onClose, onSuccess, addToast }) {
 }
 
 // ──── P2P Market Tab ────
-function P2PMarketTab({ companies, formatCurrency }) {
-    // Check if there are any companies with shares available
-    const activeCompanies = companies.filter(c => c.sharesAvailable > 0);
-    const inactiveCompanies = companies.filter(c => c.sharesAvailable <= 0);
+function P2PMarketTab({ orders, companies, loading, onWithdraw, formatCurrency }) {
+    if (loading && orders.length === 0) {
+        return <div className="card text-center py-12"><p className="text-text-secondary">Loading P2P listings...</p></div>;
+    }
 
     return (
         <div className="space-y-4 animate-fade-in">
-            <h3 className="font-heading font-semibold text-text-primary">P2P Market Panel</h3>
+            <h3 className="font-heading font-semibold text-text-primary">Secondary Market Listings (P2P)</h3>
             
-            <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>Seller Company Name</th>
-                            <th className="num">Shares Listed</th>
-                            <th className="num">Current Price</th>
-                            <th className="num">Total Value</th>
-                            <th className="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {activeCompanies.map(c => (
-                            <tr key={c.id}>
-                                <td className="font-heading font-medium text-text-primary">{c.name}</td>
-                                <td className="num">{c.sharesAvailable.toLocaleString()}</td>
-                                <td className="num">{formatCurrency(c.sharePrice)}</td>
-                                <td className="num font-semibold text-accent-gold">{formatCurrency(c.sharePrice * c.sharesAvailable)}</td>
-                                <td className="text-center">
-                                    <Link to={`/company/${c.id}`} className="btn btn-outline text-xs py-1 px-3 inline-block">
-                                        Details
-                                    </Link>
-                                </td>
+            {orders.length === 0 ? (
+                <div className="card text-center py-12">
+                    <div className="text-4xl mb-3">🤝</div>
+                    <p className="text-text-secondary font-heading">No active P2P listings</p>
+                    <p className="text-text-secondary text-sm mt-1">Shares listed by participants will appear here</p>
+                </div>
+            ) : (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Target Company</th>
+                                <th>Seller</th>
+                                <th className="num">Shares Offered</th>
+                                <th className="num">Current Price</th>
+                                <th className="num">Total Value</th>
+                                <th>Listed At</th>
+                                <th className="text-center">Action</th>
                             </tr>
-                        ))}
-                        {inactiveCompanies.map(c => (
-                            <tr key={c.id} className="opacity-50">
-                                <td className="font-heading text-text-secondary">{c.name}</td>
-                                <td className="num text-text-secondary" colSpan={3}>No shares listed</td>
-                                <td className="text-center">
-                                    <Link to={`/company/${c.id}`} className="btn btn-outline text-xs py-1 px-3 inline-block">
-                                        Details
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {orders.map(o => {
+                                const targetCompany = companies.find(c => c.id === o.targetCompanyId) || o.targetCompany;
+                                const livePrice = targetCompany?.sharePrice || 0;
+                                return (
+                                    <tr key={o.id}>
+                                        <td>
+                                            <Link to={`/company/${o.targetCompanyId}`} className="font-heading font-medium text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors">
+                                                {targetCompany?.name || 'Unknown'}
+                                            </Link>
+                                        </td>
+                                        <td className="text-text-secondary">{o.sellerCompany?.name || 'Unknown'}</td>
+                                        <td className="num">{o.shares.toLocaleString()}</td>
+                                        <td className="num text-accent-green">{formatCurrency(livePrice)}</td>
+                                        <td className="num font-semibold text-accent-gold">{formatCurrency(o.shares * livePrice)}</td>
+                                        <td className="text-text-secondary text-xs">
+                                            {new Date(o.createdAt).toLocaleString()}
+                                        </td>
+                                        <td className="text-center">
+                                            <button 
+                                                onClick={() => onWithdraw(o.id)}
+                                                className="btn btn-danger text-xs py-1 px-3"
+                                            >
+                                                Cancel listing
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }

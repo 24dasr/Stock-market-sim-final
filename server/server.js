@@ -18,6 +18,8 @@ const server = http.createServer(app);
 
 // Socket.io setup
 const io = new Server(server, {
+    pingTimeout: 120000, // 2 minutes: extremely generous for slow networks
+    pingInterval: 25000,
     cors: {
         origin: true, // Allow all origins in prod/dev for easier deployment
         methods: ['GET', 'POST'],
@@ -56,8 +58,8 @@ const { startStatsJob } = require('./utils/statsCollector');
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/companies', companiesRoutes);
-app.use('/api/trades', authenticateToken, requireRole('PARTICIPANT'), tradesRoutes);
-app.use('/api/portfolio', authenticateToken, requireRole('PARTICIPANT'), tradesRoutes);
+app.use('/api/trades', authenticateToken, requireRole('PARTICIPANT', 'ADMIN'), tradesRoutes);
+app.use('/api/portfolio', authenticateToken, requireRole('PARTICIPANT', 'ADMIN'), tradesRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/bootstrap', bootstrapRoutes);

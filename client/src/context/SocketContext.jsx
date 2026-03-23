@@ -27,6 +27,7 @@ export function SocketProvider({ children }) {
         const newSocket = io(window.location.origin, {
             auth: { token },
             transports: ['websocket', 'polling'],
+            timeout: 60000, // Give slow networks more time to connect
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,

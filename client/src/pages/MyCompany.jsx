@@ -1,31 +1,8 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
-import { api } from '../api';
 
 export default function MyCompany() {
-    const { myCompany, formatCurrency, addToast, refreshMyCompany } = useMarket();
-    const [sharesInput, setSharesInput] = useState('');
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        if (myCompany) {
-            setSharesInput(myCompany.sharesAvailable.toString());
-        }
-    }, [myCompany]);
-
-    const handleUpdateShares = async () => {
-        setSaving(true);
-        try {
-            await api.updateMyShares(parseInt(sharesInput));
-            addToast('Shares updated', 'success');
-            await refreshMyCompany();
-        } catch (err) {
-            addToast(err.message, 'error');
-        } finally {
-            setSaving(false);
-        }
-    };
+    const { myCompany, formatCurrency } = useMarket();
 
     if (!myCompany) {
         return (
@@ -73,35 +50,7 @@ export default function MyCompany() {
                 ))}
             </div>
 
-            {/* Shares Control */}
-            <div className="card">
-                <h3 className="font-heading font-semibold text-text-primary mb-4">Shares Available for Sale</h3>
-                <div className="flex items-end gap-4">
-                    <div className="flex-1">
-                        <label className="label">Shares to List ({myCompany.totalShares.toLocaleString()} max)</label>
-                        <input
-                            type="range"
-                            min="0"
-                            max={myCompany.totalShares}
-                            value={sharesInput}
-                            onChange={e => setSharesInput(e.target.value)}
-                            className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer accent-accent-blue"
-                        />
-                        <div className="flex justify-between mt-1">
-                            <span className="text-text-secondary text-xs font-mono">0</span>
-                            <span className="text-accent-blue text-sm font-mono font-bold">{parseInt(sharesInput).toLocaleString()}</span>
-                            <span className="text-text-secondary text-xs font-mono">{myCompany.totalShares.toLocaleString()}</span>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleUpdateShares}
-                        disabled={saving || parseInt(sharesInput) === myCompany.sharesAvailable}
-                        className="btn btn-primary"
-                    >
-                        {saving ? 'Saving...' : 'Update'}
-                    </button>
-                </div>
-            </div>
+
 
             {/* Holdings Preview */}
             {myCompany.holdings && myCompany.holdings.length > 0 && (

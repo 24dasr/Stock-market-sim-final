@@ -4,7 +4,7 @@ import { useMarket } from '../context/MarketContext';
 import { api } from '../api';
 
 export default function Portfolio() {
-    const { holdings, formatCurrency, addToast, priceFlashes, marketConfig, myCompany } = useMarket();
+    const { holdings, formatCurrency, addToast, priceFlashes, marketConfig, myCompany, marketDataTick } = useMarket();
     const [sellModal, setSellModal] = useState(null);
     const [sellQuantity, setSellQuantity] = useState('');
     const [selling, setSelling] = useState(false);
@@ -36,7 +36,7 @@ export default function Portfolio() {
 
     useEffect(() => {
         fetchOrders();
-    }, [myCompany?.id, holdings]);
+    }, [myCompany?.id, holdings, marketDataTick]);
 
     const handleSell = async () => {
         if (!sellModal || !sellQuantity || parseInt(sellQuantity) <= 0) return;
@@ -65,8 +65,8 @@ export default function Portfolio() {
     };
 
     const validHoldings = Array.isArray(holdings) ? holdings : [];
-    const totalPortfolioValue = validHoldings.reduce((sum, h) => sum + (h?.shares * (h?.targetCompany?.sharePrice || 0)), 0);
-    const totalCostBasis = validHoldings.reduce((sum, h) => sum + (h?.shares * (h?.avgBuyPrice || 0)), 0);
+    const totalPortfolioValue = validHoldings.reduce((sum, h) => sum + ((h?.shares || 0) * (h?.targetCompany?.sharePrice || 0)), 0);
+    const totalCostBasis = validHoldings.reduce((sum, h) => sum + ((h?.shares || 0) * (h?.avgBuyPrice || 0)), 0);
     const totalPnL = totalPortfolioValue - totalCostBasis;
     const totalPnLPercent = totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
 
@@ -115,12 +115,13 @@ export default function Portfolio() {
                         </thead>
                         <tbody>
                             {validHoldings.map(h => {
-                                const sharePrice = h?.targetCompany?.sharePrice || 0;
-                                const compName = h?.targetCompany?.name || 'Unknown';
-                                const currentValue = h.shares * sharePrice;
-                                const costBasis = h.shares * h.avgBuyPrice;
-                                const pnl = currentValue - costBasis;
-                                const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+                                    const sharePrice = h?.targetCompany?.sharePrice || 0;
+                                    const compName = h?.targetCompany?.name || 'Unknown';
+                                    const shares = h?.shares || 0;
+                                    const currentValue = shares * sharePrice;
+                                    const costBasis = shares * (h?.avgBuyPrice || 0);
+                                    const pnl = currentValue - costBasis;
+                                    const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
                                 const flash = h?.targetCompanyId ? priceFlashes[h.targetCompanyId] : null;
 
                                 return (
@@ -130,11 +131,11 @@ export default function Portfolio() {
                                                 {compName}
                                             </Link>
                                         </td>
-                                        <td className="num">{h.shares.toLocaleString()}</td>
+                                        <td className="num">{(h?.shares || 0).toLocaleString()}</td>
                                         <td className={`num font-semibold text-accent-green ${flash === 'up' ? 'price-flash-up' : flash === 'down' ? 'price-flash-down' : ''}`}>
                                             {formatCurrency(sharePrice)}
                                         </td>
-                                        <td className="num text-text-secondary">{formatCurrency(h.avgBuyPrice)}</td>
+                                        <td className="num text-text-secondary">{formatCurrency(h?.avgBuyPrice || 0)}</td>
                                         <td className="num">{formatCurrency(currentValue)}</td>
                                         <td className={`num font-semibold ${pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                                             {pnl >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(pnl))} ({pnlPercent.toFixed(2)}%)
@@ -198,11 +199,11 @@ export default function Portfolio() {
                                                     {targetName}
                                                 </Link>
                                             </td>
-                                            <td className="num">{o.shares.toLocaleString()}</td>
-                                            <td className="num text-accent-green">{formatCurrency(o.targetCompany?.sharePrice || 0)}</td>
-                                            <td className="num">{formatCurrency(o.shares * (o.targetCompany?.sharePrice || 0))}</td>
+                                            <td className="num">{(o?.shares || 0).toLocaleString()}</td>
+                                            <td className="num text-accent-green">{formatCurrency(o?.targetCompany?.sharePrice || 0)}</td>
+                                            <td className="num">{formatCurrency((o?.shares || 0) * (o?.targetCompany?.sharePrice || 0))}</td>
                                             <td className="num text-text-secondary text-sm">
-                                                {new Date(o.createdAt).toLocaleTimeString()}
+                                                {o?.createdAt ? new Date(o.createdAt).toLocaleTimeString() : 'N/A'}
                                             </td>
                                             <td>
                                                 <button

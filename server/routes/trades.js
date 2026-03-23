@@ -8,7 +8,7 @@ const { recordCompanySnapshot } = require('../utils/statsCollector');
 
 const prisma = new PrismaClient();
 
-router.use(authenticateToken, requireRole('PARTICIPANT'));
+router.use(authenticateToken, requireRole('PARTICIPANT', 'ADMIN'));
 
 // POST /api/trades/buy
 router.post('/buy', async (req, res) => {
@@ -98,6 +98,7 @@ router.post('/buy', async (req, res) => {
                     type: 'IPO',
                     buyerCompanyId,
                     sellerCompanyId: targetCompanyId,
+                    targetCompanyId,
                     shares,
                     pricePerShare: seller.sharePrice,
                     total: totalCost,
@@ -237,10 +238,10 @@ router.post('/sell/withdraw', async (req, res) => {
             const order = await tx.sellOrder.findUnique({ where: { id: orderId } });
 
             if (!order) throw new Error('Order not found');
-            if (order.sellerCompanyId !== sellerCompanyId) throw new Error('Not authorized to withdraw this order');
+            if (req.user.role !== 'ADMIN' && order.sellerCompanyId !== sellerCompanyId) throw new Error('Not authorized to withdraw this order');
 
             const ageMs = Date.now() - new Date(order.createdAt).getTime();
-            if (ageMs < cooldownMs) {
+            if (req.user.role !== 'ADMIN' && ageMs < cooldownMs) {
                 const remainingSec = Math.ceil((cooldownMs - ageMs) / 1000);
                 throw new Error(`Cannot withdraw yet. Cooldown remaining: ${remainingSec}s`);
             }
@@ -249,7 +250,7 @@ router.post('/sell/withdraw', async (req, res) => {
             const existingHolding = await tx.holding.findUnique({
                 where: {
                     ownerCompanyId_targetCompanyId: {
-                        ownerCompanyId: sellerCompanyId,
+                        ownerCompanyId: order.sellerCompanyId,
                         targetCompanyId: order.targetCompanyId,
                     },
                 },
@@ -264,7 +265,7 @@ router.post('/sell/withdraw', async (req, res) => {
                 const targetCompany = await tx.company.findUnique({ where: { id: order.targetCompanyId } });
                 await tx.holding.create({
                     data: {
-                        ownerCompanyId: sellerCompanyId,
+                        ownerCompanyId: order.sellerCompanyId,
                         targetCompanyId: order.targetCompanyId,
                         shares: order.shares,
                         avgBuyPrice: targetCompany.sharePrice, // Simplification on return
@@ -280,10 +281,10 @@ router.post('/sell/withdraw', async (req, res) => {
             req.io.to('market').emit('order:withdrawn', { id: orderId });
 
             const sellerHoldings = await prisma.holding.findMany({
-                where: { ownerCompanyId: sellerCompanyId },
+                where: { ownerCompanyId: order.sellerCompanyId },
                 include: { targetCompany: { select: { name: true, sharePrice: true } } },
             });
-            req.io.to(`company:${sellerCompanyId}`).emit('portfolio:update', { holdings: sellerHoldings });
+            req.io.to(`company:${order.sellerCompanyId}`).emit('portfolio:update', { holdings: sellerHoldings });
         }
 
         res.json({ message: 'Order withdrawn successfully' });
@@ -373,6 +374,7 @@ router.post('/buy-p2p', async (req, res) => {
                     type: 'P2P',
                     buyerCompanyId,
                     sellerCompanyId: order.sellerCompanyId,
+                    targetCompanyId: order.targetCompanyId,
                     shares: shares,
                     pricePerShare: currentPrice,
                     total: totalCost,
@@ -467,6 +469,7 @@ router.get('/me', async (req, res) => {
             include: {
                 buyer: { select: { name: true } },
                 seller: { select: { name: true } },
+                targetCompany: { select: { name: true } },
             },
             orderBy: { timestamp: 'desc' },
         });
