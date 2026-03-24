@@ -14,10 +14,14 @@ export default function MyCompany() {
 
     const sharesSold = myCompany.totalShares - myCompany.sharesAvailable;
     const portfolioValue = myCompany.holdings?.reduce((sum, h) => sum + (h.shares * h.targetCompany.sharePrice), 0) || 0;
-    const netWorth = myCompany.cashBalance + portfolioValue + (myCompany.totalShares * myCompany.sharePrice);
+    const netWorth = myCompany.cashBalance + portfolioValue;
+
+    const liveValuation = myCompany.stockPercent > 0
+        ? (myCompany.totalShares * myCompany.sharePrice) / (myCompany.stockPercent / 100)
+        : myCompany.totalValuation;
 
     const stats = [
-        { label: 'Total Valuation', value: formatCurrency(myCompany.totalValuation), color: 'text-text-primary' },
+        { label: 'Total Valuation', value: formatCurrency(liveValuation), color: 'text-text-primary' },
         { label: 'Stock Price', value: formatCurrency(myCompany.sharePrice), color: 'text-accent-green' },
         { label: 'Cash Balance', value: formatCurrency(myCompany.cashBalance), color: 'text-accent-blue' },
         { label: 'Portfolio Value', value: formatCurrency(portfolioValue), color: 'text-accent-gold' },

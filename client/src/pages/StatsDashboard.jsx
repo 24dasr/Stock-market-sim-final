@@ -132,11 +132,16 @@ const StatsDashboard = () => {
                 <div className="col-span-3 bg-[#ffc107]/5 border border-[#ffc107]/20 p-3 rounded-lg flex flex-col">
                     <h3 className="text-xs uppercase tracking-widest mb-2 border-b border-[#ffc107]/20 pb-1 text-[#ffc107]">Net Worth Leaderboard</h3>
                     <div className="flex-1 overflow-hidden">
-                        {[...companies].sort((a,b) => b.totalValuation - a.totalValuation).map((c, i) => (
+                        {[...companies].map(c => ({
+                            ...c,
+                            liveValuation: c.stockPercent > 0
+                                ? (c.totalShares * c.sharePrice) / (c.stockPercent / 100)
+                                : c.totalValuation
+                        })).sort((a,b) => b.liveValuation - a.liveValuation).map((c, i) => (
                             <div key={c.id} className={`flex justify-between items-center p-2 mb-1 border-l-2 ${i < 3 ? 'border-[#ffc107]' : 'border-transparent'} bg-white/5`}>
                                 <span className="text-xs opacity-50">#{i+1}</span>
                                 <span className="flex-1 ml-3 font-bold truncate">{c.name}</span>
-                                <span className="text-[#ffc107] font-bold">${c.totalValuation.toLocaleString()}</span>
+                                <span className="text-[#ffc107] font-bold">${c.liveValuation.toLocaleString()}</span>
                             </div>
                         ))}
                     </div>

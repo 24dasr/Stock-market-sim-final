@@ -113,7 +113,11 @@ export default function CompanyDetail() {
                 </div>
                 <div className="card p-4">
                     <p className="text-xs font-heading text-text-secondary uppercase tracking-wider mb-1">Total Valuation</p>
-                    <p className="text-xl font-mono font-medium">{formatCurrency(company.totalValuation)}</p>
+                    <p className="text-xl font-mono font-medium">{formatCurrency(
+                        company.stockPercent > 0
+                            ? (company.totalShares * currentPrice) / (company.stockPercent / 100)
+                            : company.totalValuation
+                    )}</p>
                 </div>
                 <div className="card p-4">
                     <p className="text-xs font-heading text-text-secondary uppercase tracking-wider mb-1">Shares Available</p>

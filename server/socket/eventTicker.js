@@ -48,9 +48,14 @@ async function startEventTicker(eventId, io) {
                 const delta = newPrice - company.sharePrice;
                 const deltaPercent = company.sharePrice > 0 ? (delta / company.sharePrice) * 100 : 0;
 
+                // Recalculate total valuation based on new share price
+                const newTotalValuation = company.stockPercent > 0
+                    ? (company.totalShares * newPrice) / (company.stockPercent / 100)
+                    : company.totalValuation;
+
                 await prisma.company.update({
                     where: { id: target.companyId },
-                    data: { sharePrice: newPrice },
+                    data: { sharePrice: newPrice, totalValuation: newTotalValuation },
                 });
 
                 const { recordStockPrice } = require('../utils/history');
