@@ -88,6 +88,10 @@ typings/
 .DS_Store
 Thumbs.db
 
+# SQLite database
+*.db
+*.db-journal
+
 # Build directories
 client/dist/
 server/public/
