@@ -125,21 +125,7 @@ export function MarketProvider({ children }) {
         bootstrap();
     }, [bootstrap]);
 
-    // 5-second background polling to keep data fresh
-    useEffect(() => {
-        if (!user) return;
-
-        const interval = setInterval(() => {
-            refreshCompanies();
-            refreshMyCompany();
-            // Bump tick so pages like Market/Portfolio re-fetch orders
-            setMarketDataTick(prev => prev + 1);
-        }, 5000);
-
-        return () => clearInterval(interval);
-    }, [user, refreshCompanies, refreshMyCompany]);
-
-    // Socket event listeners
+    // Socket.io event listeners
     useEffect(() => {
         if (!socket) return;
 

@@ -21,23 +21,21 @@ async function recordSnapshots() {
             }
         });
 
-        const snapshots = companies.map(c => {
+        const data = companies.map(c => {
             const portfolioValue = c.holdings.reduce((sum, h) => {
                 return sum + (h.shares * h.targetCompany.sharePrice);
             }, 0);
             const netWorth = c.cashBalance + portfolioValue;
 
-            return prisma.netWorthSnapshot.create({
-                data: {
-                    companyId: c.id,
-                    netWorth,
-                    cash: c.cashBalance,
-                    portfolioValue
-                }
-            });
+            return {
+                companyId: c.id,
+                netWorth,
+                cash: c.cashBalance,
+                portfolioValue
+            };
         });
 
-        await Promise.all(snapshots);
+        await prisma.netWorthSnapshot.createMany({ data });
     } catch (err) {
         console.error('Error recording net worth snapshots:', err);
     }

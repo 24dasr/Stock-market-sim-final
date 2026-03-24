@@ -13,6 +13,35 @@ let cachedLeaderboard = null;
 let lastLeaderboardTime = 0;
 const LEADERBOARD_CACHE_MS = 5000;
 
+// Debounced leaderboard broadcast to prevent overhead when many trades happen at once
+let leaderboardUpdateTimeout = null;
+const LEADERBOARD_DEBOUNCE_MS = 2000; // 2 seconds
+
+async function broadcastLeaderboard(io) {
+    if (!io) return;
+    
+    // Clear existing pending update
+    if (leaderboardUpdateTimeout) {
+        clearTimeout(leaderboardUpdateTimeout);
+    }
+
+    const now = Date.now();
+    const timeSinceLast = now - lastLeaderboardTime;
+
+    // If it's been long enough, update now
+    if (timeSinceLast >= LEADERBOARD_CACHE_MS) {
+        const leaderboard = await calculateLeaderboard();
+        io.to('market').emit('leaderboard:update', leaderboard);
+        return;
+    }
+
+    // Otherwise, schedule an update for the future
+    leaderboardUpdateTimeout = setTimeout(async () => {
+        const leaderboard = await calculateLeaderboard();
+        io.to('market').emit('leaderboard:update', leaderboard);
+    }, LEADERBOARD_DEBOUNCE_MS);
+}
+
 router.use(authenticateToken, requireRole('PARTICIPANT', 'ADMIN'));
 
 // POST /api/trades/buy
@@ -114,7 +143,7 @@ router.post('/buy', async (req, res) => {
             await recordStockPrice(targetCompanyId, seller.sharePrice, tx);
 
             return { trade, buyer, seller, totalCost };
-        });
+        }, { timeout: 30000 });
 
         // Emit trade event
         if (req.io) {
@@ -133,9 +162,8 @@ router.post('/buy', async (req, res) => {
                 targetCompanyId
             });
 
-            // Emit leaderboard update
-            const leaderboard = await calculateLeaderboard();
-            req.io.to('market').emit('leaderboard:update', leaderboard);
+            // Emit leaderboard update (debounced)
+            broadcastLeaderboard(req.io);
 
             // Emit portfolio update to buyer
             const buyerHoldings = await prisma.holding.findMany({
@@ -144,9 +172,6 @@ router.post('/buy', async (req, res) => {
             });
             req.io.to(`company:${buyerCompanyId}`).emit('portfolio:update', { holdings: buyerHoldings });
 
-            // Record snapshots for stats dashboard
-            recordCompanySnapshot(buyerCompanyId);
-            recordCompanySnapshot(targetCompanyId);
         }
 
         res.json(result.trade);
@@ -211,7 +236,7 @@ router.post('/sell', async (req, res) => {
             });
 
             return newOrder;
-        });
+        }, { timeout: 30000 });
 
         if (req.io) {
             req.io.to('market').emit('order:created', order);
@@ -280,7 +305,7 @@ router.post('/sell/withdraw', async (req, res) => {
 
             await tx.sellOrder.delete({ where: { id: orderId } });
             return order;
-        });
+        }, { timeout: 30000 });
 
         if (req.io) {
             req.io.to('market').emit('order:withdrawn', { id: orderId });
@@ -400,7 +425,7 @@ router.post('/buy-p2p', async (req, res) => {
             }
 
             return { trade, order, buyer, processedShares: shares };
-        }, { timeout: 20000 });
+        }, { timeout: 30000 });
 
         // Socket Emissions
         if (req.io) {
@@ -417,8 +442,8 @@ router.post('/buy-p2p', async (req, res) => {
                 targetCompanyId: result.order.targetCompanyId
             });
 
-            const leaderboard = await calculateLeaderboard();
-            req.io.to('market').emit('leaderboard:update', leaderboard);
+            // Emit leaderboard update (debounced)
+            broadcastLeaderboard(req.io);
 
             const buyerHoldings = await prisma.holding.findMany({
                 where: { ownerCompanyId: buyerCompanyId },
@@ -432,9 +457,6 @@ router.post('/buy-p2p', async (req, res) => {
             });
             req.io.to(`company:${result.order.sellerCompanyId}`).emit('portfolio:update', { holdings: sellerHoldings });
 
-            // Record snapshots for stats dashboard
-            recordCompanySnapshot(buyerCompanyId);
-            recordCompanySnapshot(result.order.sellerCompanyId);
         }
 
         res.json(result.trade);
